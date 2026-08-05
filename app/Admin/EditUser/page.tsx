@@ -299,7 +299,6 @@ function EditUserContent() {
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
             {isSuperAdmin && (
               <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-2xl text-purple-900 text-sm font-semibold flex items-center gap-3 shadow-xs">
-                <ShieldCheck className="w-6 h-6 text-purple-600 shrink-0" />
                 <span>Super Admin accounts automatically possess permanent full system control. Access control permissions cannot be modified for Super Admin users.</span>
               </div>
             )}

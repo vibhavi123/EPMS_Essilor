@@ -115,21 +115,52 @@ export async function GET(request: NextRequest) {
 
     const whereClause = conditions.join(" AND ");
 
-    const [countRows] = await pool.query<RowDataPacket[]>(
-      `SELECT COUNT(*) AS total FROM Employees WHERE ${whereClause}`,
-      params
-    );
-    const total = Number(countRows[0]?.total ?? 0);
-
-    const [rows] = await pool.query<RowDataPacket[]>(
+    const [empRows] = await pool.query<RowDataPacket[]>(
       `SELECT * FROM Employees
        WHERE ${whereClause}
-       ORDER BY EmployeeName ASC
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+       ORDER BY EmployeeName ASC`,
+      params
     );
 
-    const employees = rows.map((emp) => ({
+    // Also include users created via User Management so they appear in employee selection & suggestions
+    const userConditions = ["IsActive = 1", "FullName IS NOT NULL", "FullName != ''"];
+    const userParams: unknown[] = [];
+    if (search) {
+      userConditions.push("(FullName LIKE ? OR AccessId LIKE ? OR Username LIKE ?)");
+      userParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    if (company) {
+      userConditions.push("Company = ?");
+      userParams.push(company);
+    }
+    if (department) {
+      userConditions.push("Department = ?");
+      userParams.push(department);
+    }
+
+    const [userRows] = await pool.query<RowDataPacket[]>(
+      `SELECT Id, AccessId AS EmployeeId, FullName AS EmployeeName, Company AS EmployeeCompany, Department, IsActive, CreatedAt, UpdatedAt
+       FROM Users
+       WHERE ${userConditions.join(" AND ")}
+       ORDER BY FullName ASC`,
+      userParams
+    );
+
+    const empNamesSet = new Set(
+      empRows.map((e) => (String(e.EmployeeName || "").trim().toLowerCase()))
+    );
+
+    const combinedRows = [
+      ...empRows,
+      ...userRows.filter(
+        (u) => !empNamesSet.has(String(u.EmployeeName || "").trim().toLowerCase())
+      ),
+    ];
+
+    const total = combinedRows.length;
+    const paginatedRows = combinedRows.slice(offset, offset + limit);
+
+    const employees = paginatedRows.map((emp) => ({
       id: emp.Id,
       employeeId: emp.EmployeeId,
       employeeName: emp.EmployeeName,

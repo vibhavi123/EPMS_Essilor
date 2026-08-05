@@ -10,6 +10,8 @@ export function usePermissions() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchPermissions = async () => {
       try {
         setIsLoading(true);
@@ -17,21 +19,38 @@ export function usePermissions() {
         const response = await fetch("/api/permissions/me");
         const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to fetch permissions");
+        if (!isMounted) return;
+
+        if (response.status === 401 || data?.message === "Not authenticated") {
+          setPermissions(null);
+          setError("Not authenticated");
+          return;
         }
 
-        setPermissions(data.data);
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || "Failed to fetch permissions");
+        }
+
+        setPermissions(data.data ?? null);
       } catch (err) {
+        if (!isMounted) return;
         const errorMessage = err instanceof Error ? err.message : "Unknown error";
         setError(errorMessage);
-        console.error("Failed to fetch permissions:", errorMessage);
+        if (errorMessage !== "Not authenticated") {
+          console.warn("Permissions fetch notice:", errorMessage);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     void fetchPermissions();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const hasPermission = useCallback(

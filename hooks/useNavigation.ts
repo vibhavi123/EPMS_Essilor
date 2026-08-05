@@ -41,14 +41,17 @@ export const ROUTES = {
   // Admin Routes
   ADMIN: {
     ADD_USER: "/Admin/AddUser",
+    ADD_GUARD: "/Admin/AddGuard",
+    EDIT_USER: "/Admin/EditUser",
     ALL_USERS: "/Admin/AllUsers",
     CONTROL_USER: "/Admin/ControlUser",
     DELETE_USER: "/Admin/DeleteUser",
     ADD_PACKAGE: "/Admin/AddPackage",
+    OVERDUE_SETTINGS: "/Admin/OverdueSettings",
+    LOGIN_MONITOR: "/Admin/LoginMonitor",
   },
   
   // Other Routes
-  DASHBOARD: "/pages/Dashbaord",
   REPORT: "/pages/Report",
   ENTRY_EXIT_RECORDING: "/pages/EntryExitRecording",
 } as const;
@@ -73,30 +76,55 @@ export function useNavigation() {
     goToAllPackages: () => router.push(ROUTES.PACKAGES.ALL),
     goToAllIncomingPackages: () => router.push(ROUTES.PACKAGES.ALL_INCOMING),
     goToAllOutgoingPackages: () => router.push(ROUTES.PACKAGES.ALL_OUTGOING),
-    goToIncomingPackageDetails: () => router.push(ROUTES.PACKAGE_DETAILS.INCOMING),
-    goToOutgoingPackageDetails: () => router.push(ROUTES.PACKAGE_DETAILS.OUTGOING),
-    goToIncomingPackageUpdate: () => router.push(ROUTES.PACKAGE_UPDATE.INCOMING),
-    goToOutgoingPackageUpdate: () => router.push(ROUTES.PACKAGE_UPDATE.OUTGOING),
-    goToDashboard: () => router.push(ROUTES.DASHBOARD),
-    goToIncomingVerification: (packageId?: string) => {
-      const url = packageId 
-        ? `${ROUTES.VERIFICATION.INCOMING}?id=${packageId}`
-        : ROUTES.VERIFICATION.INCOMING;
+    goToIncomingPackageDetails: (trackingNumber?: string) => {
+      const url = trackingNumber 
+        ? `${ROUTES.PACKAGE_DETAILS.INCOMING}?trackingNumber=${trackingNumber}`
+        : ROUTES.PACKAGE_DETAILS.INCOMING;
       router.push(url);
     },
-    goToOutgoingVerification: (packageId?: string) => {
-      const url = packageId 
-        ? `${ROUTES.VERIFICATION.OUTGOING}?id=${packageId}`
-        : ROUTES.VERIFICATION.OUTGOING;
+    goToOutgoingPackageDetails: (trackingNumber?: string) => {
+      const url = trackingNumber 
+        ? `${ROUTES.PACKAGE_DETAILS.OUTGOING}?trackingNumber=${trackingNumber}`
+        : ROUTES.PACKAGE_DETAILS.OUTGOING;
+      router.push(url);
+    },
+    goToIncomingPackageUpdate: (trackingNumber?: string) => {
+      const url = trackingNumber ? `${ROUTES.PACKAGE_UPDATE.INCOMING}?trackingNumber=${encodeURIComponent(trackingNumber)}` : ROUTES.PACKAGE_UPDATE.INCOMING;
+      router.push(url);
+    },
+    goToOutgoingPackageUpdate: (trackingNumber?: string) => {
+      const url = trackingNumber ? `${ROUTES.PACKAGE_UPDATE.OUTGOING}?trackingNumber=${encodeURIComponent(trackingNumber)}` : ROUTES.PACKAGE_UPDATE.OUTGOING;
+      router.push(url);
+    },
+    goToIncomingVerification: (trackingNumber?: string, referenceNumber?: string, mode?: "single" | "batch") => {
+      let url: string = ROUTES.VERIFICATION.INCOMING;
+      if (mode === "batch" && referenceNumber) {
+        url = `${ROUTES.VERIFICATION.INCOMING}?referenceNumber=${referenceNumber}`;
+      } else if (trackingNumber) {
+        url = `${ROUTES.VERIFICATION.INCOMING}?trackingNumber=${trackingNumber}`;
+      }
+      router.push(url);
+    },
+    goToOutgoingVerification: (trackingNumber?: string, referenceNumber?: string, mode?: "single" | "batch") => {
+      let url: string = ROUTES.VERIFICATION.OUTGOING;
+      if (mode === "batch" && referenceNumber) {
+        url = `${ROUTES.VERIFICATION.OUTGOING}?referenceNumber=${referenceNumber}`;
+      } else if (trackingNumber) {
+        url = `${ROUTES.VERIFICATION.OUTGOING}?trackingNumber=${trackingNumber}`;
+      }
       router.push(url);
     },
     goToHoldingVerification: () => router.push(ROUTES.VERIFICATION.HOLDING),
     goToReport: () => router.push(ROUTES.REPORT),
     goToEntryExitRecording: () => router.push(ROUTES.ENTRY_EXIT_RECORDING),
     goToAddUser: () => router.push(ROUTES.ADMIN.ADD_USER),
+    goToAddGuard: () => router.push(ROUTES.ADMIN.ADD_GUARD),
+    goToEditUser: (userId: string | number) => router.push(`${ROUTES.ADMIN.EDIT_USER}?id=${userId}`),
     goToAllUsers: () => router.push(ROUTES.ADMIN.ALL_USERS),
     goToControlUser: () => router.push(ROUTES.ADMIN.CONTROL_USER),
     goToDeleteUser: () => router.push(ROUTES.ADMIN.DELETE_USER),
     goToAddPackage: () => router.push(ROUTES.ADMIN.ADD_PACKAGE),
+    goToOverdueSettings: () => router.push(ROUTES.ADMIN.OVERDUE_SETTINGS),
+    goToLoginMonitor: () => router.push(ROUTES.ADMIN.LOGIN_MONITOR),
   };
 }

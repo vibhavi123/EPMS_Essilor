@@ -1,73 +1,69 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
 import GuardIdModal from "@/components/GuardIdModal";
-import { Clock, AlertCircle, Eye } from "lucide-react";
+import EmployeeIdModal from "@/components/EmployeeIdModal";
+import OutgoingVerificationGuardModel from "@/components/OutgoingVerificationGuardModel";
+import AlertModal from "@/components/AlertModal";
+import { Clock, AlertCircle } from "lucide-react";
 import { HoldingPackage } from "@/utils/formTypes";
+import {
+  fetchHoldingPackages,
+  verifyHoldingPackage,
+} from "@/lib/api/holdingPackagesVerification";
+import { PermissionGuard } from "@/hooks/usePermissions";
 
 export default function VerifyHoldingPackagesPage() {
+  const router = useRouter();
   const [holdingPackages, setHoldingPackages] = useState<HoldingPackage[]>([]);
   const [filteredPackages, setFilteredPackages] = useState<HoldingPackage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showGuardModal, setShowGuardModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<HoldingPackage | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "warning" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
 
-  // Mock data - Replace with API call
+  const reloadHoldingPackages = async () => {
+    const result = await fetchHoldingPackages();
+
+    if (!result.success || !result.data) {
+      setHoldingPackages([]);
+      return;
+    }
+
+    setHoldingPackages(result.data as HoldingPackage[]);
+  };
+
+  // Fetch holding packages
   useEffect(() => {
-    const fetchHoldingPackages = async () => {
+    const loadHoldingPackages = async () => {
       setLoading(true);
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        const mockData: HoldingPackage[] = [
-          {
-            id: 1,
-            trackingNumber: "TRK-2025-001",
-            customerName: "John Doe",
-            holdingReason: "Pending damage inspection",
-            createdAt: "2025-12-15T10:30:00",
-            type: "incoming",
-            mode: "single",
-            verified: false,
-          },
-          {
-            id: 2,
-            referenceNumber: "REF-002",
-            trackingNumbers: ["TRK-2025-010", "TRK-2025-011", "TRK-2025-012"],
-            customerName: "Jane Smith",
-            holdingReason: "Awaiting customer confirmation",
-            createdAt: "2025-12-15T11:00:00",
-            type: "outgoing",
-            mode: "batch",
-            verified: false,
-          },
-          {
-            id: 3,
-            referenceNumber: "REF-003",
-            customerName: "Mike Wilson",
-            holdingReason: "Address verification needed",
-            createdAt: "2025-12-14T14:20:00",
-            type: "incoming",
-            mode: "batch",
-            verified: true,
-          },
-        ];
-
-        setHoldingPackages(mockData);
-        setFilteredPackages(mockData);
+        await reloadHoldingPackages();
       } catch (error) {
-        console.error("Failed to fetch holding packages:", error);
+        console.error("Error fetching holding packages:", error);
+        setHoldingPackages([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchHoldingPackages();
+    loadHoldingPackages();
   }, []);
 
   // Filter packages based on search (only show pending)
@@ -80,8 +76,8 @@ export default function VerifyHoldingPackagesPage() {
         (pkg) =>
           (pkg.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
           (pkg.trackingNumbers?.some(tn => tn.toLowerCase().includes(searchTerm.toLowerCase())) ?? false) ||
-          pkg.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (pkg.referenceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+            pkg.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (pkg.mode !== "single" && (pkg.referenceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false))
       );
     }
 
@@ -90,7 +86,80 @@ export default function VerifyHoldingPackagesPage() {
 
   const handleVerifyClick = (pkg: HoldingPackage) => {
     setSelectedPackage(pkg);
-    setShowGuardModal(true);
+    setShowVerificationModal(true);
+  };
+
+  const handleVerifyWithEmployee = async (
+    employeeId: string,
+    time: string,
+    date: string
+  ) => {
+    if (!selectedPackage) return;
+
+    setIsSubmitting(true);
+
+    try {
+      // Call API to verify holding package
+      const result = await verifyHoldingPackage({
+        id: selectedPackage.id,
+        type: selectedPackage.type,
+        mode: selectedPackage.mode,
+        referenceNumber: selectedPackage.referenceNumber,
+        employeeId: employeeId.trim(),
+      });
+
+      if (!result.success) {
+        setAlertModal({
+          isOpen: true,
+          title: "Error",
+          message: result.error || "Failed to verify package",
+          type: "error",
+        });
+        return;
+      }
+
+      // Update the package status in local state
+      setHoldingPackages((prev) =>
+        selectedPackage.mode === "batch" && selectedPackage.referenceNumber
+          ? prev.filter(
+              (pkg) =>
+                !(
+                  pkg.type === selectedPackage.type &&
+                  pkg.referenceNumber === selectedPackage.referenceNumber
+                )
+            )
+          : prev.filter((pkg) => pkg.id !== selectedPackage.id)
+      );
+
+      console.log("Package Verified by Employee:", {
+        packageId: selectedPackage.id,
+        trackingNumber: selectedPackage.trackingNumber,
+        employeeId,
+        time,
+        date,
+      });
+
+      setAlertModal({
+        isOpen: true,
+        title: "Success",
+        message: "Package verified successfully!",
+        type: "success",
+      });
+      setShowVerificationModal(false);
+      setSelectedPackage(null);
+      await reloadHoldingPackages();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("Verification error:", errorMessage);
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to verify package. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleVerifyWithGuard = async (
@@ -103,19 +172,37 @@ export default function VerifyHoldingPackagesPage() {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const result = await verifyHoldingPackage({
+        id: selectedPackage.id,
+        type: selectedPackage.type,
+        mode: selectedPackage.mode,
+        referenceNumber: selectedPackage.referenceNumber,
+        guardId: guardId.trim(),
+      });
 
-      // Update the package status
+      if (!result.success) {
+        setAlertModal({
+          isOpen: true,
+          title: "Error",
+          message: result.error || "Failed to verify package",
+          type: "error",
+        });
+        return;
+      }
+
       setHoldingPackages((prev) =>
-        prev.map((pkg) =>
-          pkg.id === selectedPackage.id
-            ? { ...pkg, verified: true }
-            : pkg
-        )
+        selectedPackage.mode === "batch" && selectedPackage.referenceNumber
+          ? prev.filter(
+              (pkg) =>
+                !(
+                  pkg.type === selectedPackage.type &&
+                  pkg.referenceNumber === selectedPackage.referenceNumber
+                )
+            )
+          : prev.filter((pkg) => pkg.id !== selectedPackage.id)
       );
 
-      console.log(" Package Verified by Guard:", {
+      console.log("Package Verified by Guard:", {
         packageId: selectedPackage.id,
         trackingNumber: selectedPackage.trackingNumber,
         guardId,
@@ -123,21 +210,47 @@ export default function VerifyHoldingPackagesPage() {
         date,
       });
 
-      setShowGuardModal(false);
+      setAlertModal({
+        isOpen: true,
+        title: "Success",
+        message: "Package verified successfully!",
+        type: "success",
+      });
+      setShowVerificationModal(false);
       setSelectedPackage(null);
+      
+      // Route back to the matching list after verification
+      if (selectedPackage.type === "incoming") {
+        setTimeout(() => {
+          router.push("/pages/AllIncomingPackage");
+        }, 1500);
+      } else if (selectedPackage.type === "outgoing" && selectedPackage.holdingReason === "Awaiting guard verification") {
+        setTimeout(() => {
+          router.push("/pages/AllOutgoingPackage");
+        }, 1500);
+      } else {
+        await reloadHoldingPackages();
+      }
     } catch (error) {
-      console.error("Verification error:", error);
-      alert("Failed to verify package. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("Verification error:", errorMessage);
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to verify package. Please try again.",
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
-      <Sidebar />
+    <PermissionGuard permission="verifyHoldingPackages">
+      <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+        <Sidebar />
 
-      <main className="flex-1 lg:ml-72 p-4 md:p-10 pt-24 lg:pt-10 transition-all duration-300">
+        <main className="flex-1 lg:ml-72 p-4 md:p-10 pt-24 lg:pt-10 transition-all duration-300">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
           <div className="flex items-center gap-6">
@@ -177,13 +290,6 @@ export default function VerifyHoldingPackagesPage() {
             color="bg-blue-50"
             iconColor="text-blue-600"
           />
-          <StatCard
-            icon={AlertCircle}
-            label="Pending Verification"
-            count={holdingPackages.filter((p) => !p.verified).length}
-            color="bg-yellow-50"
-            iconColor="text-yellow-600"
-          />
         </div>
 
         {/* Packages List */}
@@ -216,6 +322,9 @@ export default function VerifyHoldingPackagesPage() {
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#0c244c]">
                         Mode
                       </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#0c244c]">
+                        Status
+                      </th>
                       <th className="px-6 py-4 text-center text-sm font-semibold text-[#0c244c]">
                         Action
                       </th>
@@ -223,23 +332,23 @@ export default function VerifyHoldingPackagesPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {filteredPackages.map((pkg) => (
-                      <tr key={pkg.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={`${pkg.type}-${pkg.id}`} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
-                          {pkg.trackingNumber && (
+                          {pkg.trackingNumber && !pkg.trackingNumbers && (
                             <span className="font-semibold text-[#0c244c]">
                               {pkg.trackingNumber}
                             </span>
                           )}
                           {pkg.trackingNumbers && pkg.trackingNumbers.length > 0 && (
                             <div className="space-y-1">
-                              {pkg.trackingNumbers.map((tn, idx) => (
+                              {Array.from(new Set(pkg.trackingNumbers)).map((tn, idx) => (
                                 <div key={idx} className="font-semibold text-[#0c244c]">
                                   {tn}
                                 </div>
                               ))}
                             </div>
                           )}
-                          {pkg.referenceNumber && (
+                          {pkg.mode !== "single" && pkg.referenceNumber && (
                             <div className="font-semibold text-[#0c244c]">
                               Ref: {pkg.referenceNumber}
                             </div>
@@ -272,6 +381,11 @@ export default function VerifyHoldingPackagesPage() {
                             {pkg.mode === "single" ? "Single" : "Batch"}
                           </span>
                         </td>
+                        <td className="px-6 py-4">
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                            Holding
+                          </span>
+                        </td>
                         <td className="px-6 py-4 text-center">
                           {!pkg.verified ? (
                             <button
@@ -293,25 +407,24 @@ export default function VerifyHoldingPackagesPage() {
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-4">
                 {filteredPackages.map((pkg) => (
-                  <div key={pkg.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                    {/* Header with Tracking and Customer Name */}
+                  <div key={`${pkg.type}-${pkg.id}`} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <div className="mb-4 pb-4 border-b border-gray-100">
                       <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">
                         Tracking Number
                       </p>
-                      {pkg.trackingNumber && (
+                      {pkg.trackingNumber && !pkg.trackingNumbers && (
                         <p className="font-bold text-[#0c244c] text-lg mb-2">{pkg.trackingNumber}</p>
                       )}
                       {pkg.trackingNumbers && pkg.trackingNumbers.length > 0 && (
                         <div className="space-y-1 mb-2">
-                          {pkg.trackingNumbers.map((tn, idx) => (
+                          {Array.from(new Set(pkg.trackingNumbers)).map((tn, idx) => (
                             <p key={idx} className="font-bold text-[#0c244c]">
                               {tn}
                             </p>
                           ))}
                         </div>
                       )}
-                      {pkg.referenceNumber && (
+                      {pkg.mode !== "single" && pkg.referenceNumber && (
                         <p className="font-bold text-[#0c244c] mb-2">Ref: {pkg.referenceNumber}</p>
                       )}
                       <p className="text-sm font-semibold text-gray-800">{pkg.customerName}</p>
@@ -337,6 +450,9 @@ export default function VerifyHoldingPackagesPage() {
                       >
                         {pkg.mode === "single" ? "Single" : "Batch"}
                       </span>
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                        Holding
+                      </span>
                     </div>
 
                     {/* Action Button */}
@@ -349,7 +465,7 @@ export default function VerifyHoldingPackagesPage() {
                           Verify Package
                         </button>
                       ) : (
-                        <p className="text-sm text-gray-500 text-center font-medium">✓ Verification Completed</p>
+                        <p className="text-sm text-gray-500 text-center font-medium"> Verification Completed</p>
                       )}
                     </div>
                   </div>
@@ -359,21 +475,58 @@ export default function VerifyHoldingPackagesPage() {
           )}
         </div>
 
-        {/* Guard Verification Modal */}
-        {selectedPackage && (
-          <GuardIdModal
-            isOpen={showGuardModal}
+        {/* Verification Modal */}
+        {selectedPackage?.type === "outgoing" && selectedPackage?.holdingReason === "Awaiting guard verification" && (
+          <OutgoingVerificationGuardModel
+            isOpen={showVerificationModal}
             onClose={() => {
-              setShowGuardModal(false);
+              setShowVerificationModal(false);
               setSelectedPackage(null);
             }}
             onSubmit={handleVerifyWithGuard}
             isSubmitting={isSubmitting}
-            package={selectedPackage}
+            packageDetails={{
+              trackingNumber: selectedPackage.trackingNumber || (selectedPackage.trackingNumbers?.[0] || undefined),
+              customerName: selectedPackage.customerName,
+            }}
+          />
+        )}
+
+        {selectedPackage?.type === "outgoing" && selectedPackage?.holdingReason !== "Awaiting guard verification" && (
+          <EmployeeIdModal
+            isOpen={showVerificationModal}
+            onClose={() => {
+              setShowVerificationModal(false);
+              setSelectedPackage(null);
+            }}
+            onSubmit={handleVerifyWithEmployee}
+            isSubmitting={isSubmitting}
+          />
+        )}
+
+        {selectedPackage?.type === "incoming" && (
+          <GuardIdModal
+            isOpen={showVerificationModal}
+            onClose={() => {
+              setShowVerificationModal(false);
+              setSelectedPackage(null);
+            }}
+            onSubmit={handleVerifyWithGuard}
+            isSubmitting={isSubmitting}
           />
         )}
       </main>
-    </div>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+      </div>
+    </PermissionGuard>
   );
 }
 

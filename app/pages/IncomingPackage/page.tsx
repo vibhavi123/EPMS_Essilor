@@ -5,14 +5,16 @@ import Link from "next/link";
 import Image from "next/image";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
+import { PermissionGuard } from "@/hooks/usePermissions";
 
 export default function IncomingPackageHubPage() {
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
-      <Sidebar />
+    <PermissionGuard permission="addIncomePackage">
+      <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+        <Sidebar />
 
-      <main className="flex-1 lg:ml-72 p-4 md:p-10 pt-24 lg:pt-10 transition-all duration-300">
+        <main className="flex-1 lg:ml-72 p-4 md:p-10 pt-24 lg:pt-10 transition-all duration-300">
         <br />
 
         {/* Header Section */}
@@ -25,7 +27,7 @@ export default function IncomingPackageHubPage() {
               <p className="text-sm text-gray-600 mt-1">Register packages that are arriving at the Company</p>
             </div>
             <Image 
-              src="/images/Incoming.png" 
+              src="/images/IncomingPage.png" 
               alt="Incoming Package" 
               width={192}
               height={192}
@@ -85,5 +87,6 @@ export default function IncomingPackageHubPage() {
         </div>
       </main>
     </div>
+    </PermissionGuard>
   );
 }

@@ -1,165 +1,315 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
-import GuardIdModal from "@/components/GuardIdModal";
-import GuardSelectionModal from "@/components/GuardSelectionModal";
+import AlertModal from "@/components/AlertModal";
+import EmployeeIdModal from "@/components/EmployeeIdModal";
+import EmployeeSelectionModal from "@/components/EmployeeSelectionModal";
 import HoldingStateModal from "@/components/HoldingStateModal";
+import CustomerSelector from "@/components/CustomerSelector";
+import PackageDescriptionSelector from "@/components/PackageDescriptionSelector";
 import { outgoingPackageDefaults } from "@/utils/formDefaults";
 import { useNavigation } from "@/hooks/useNavigation";
-import { ChevronDown } from "lucide-react";
-
-const customerNames = [
-  "Vision care panadura",
-  "Medical Supplies Ltd",
-  "Electronics Hub",
-  "Document Services",
-  "Tech Solutions",
-  "Vision Systems",
-];
-
-const deliveryCompanies = [
-  "Vision Systems",
-  "Medical Systems",
-  "Tech Logistics",
-  "Doc Solutions",
-  "Express Delivery",
-  "Fast Track Courier",
-];
-
-const departments = [
-  "Logistics",
-  "Dispatch",
-  "Warehouse",
-  "Operations",
-  "Administration",
-  "Sales",
-];
+import {
+  saveOutgoingPackage,
+  buildVerifiedOutgoingPackagePayload,
+  buildHoldingOutgoingPackagePayload,
+  type BaseOutgoingPackageData,
+} from "@/utils/apiClient";
+import { EmployeeData, Customer, PackageDescription, EmployeeApiResponse } from "@/utils/formTypes";
 
 export default function SingleOutgoingPackagePage() {
   const nav = useNavigation();
   const [formData, setFormData] = useState(() => ({
     ...outgoingPackageDefaults,
-    customerName: "",
-    trackingNumber: "",
   }));
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeData | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedPackageDescription, setSelectedPackageDescription] = useState<PackageDescription | null>(null);
 
   const [showGuardSelectionModal, setShowGuardSelectionModal] = useState(false);
   const [showGuardModal, setShowGuardModal] = useState(false);
   const [showHoldingStateModal, setShowHoldingStateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "warning" | "info";
+  }>({
+    
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const validateMandatoryFields = () => {
+    const missingFields: string[] = [];
+
+    if (!formData.trackingNumber.trim()) missingFields.push("Tracking Number");
+    if (!selectedCustomer) missingFields.push("Customer Name");
+    if (!selectedPackageDescription) missingFields.push("Package Description");
+    if (!selectedEmployee) missingFields.push("Employee");
+    if (selectedEmployee && !selectedEmployee.employeeId?.trim()) missingFields.push("Employee ID (from selected employee)");
+
+    if (missingFields.length > 0) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: `Please fill in all mandatory fields:\n\n${missingFields.map((f) => `• ${f}`).join("\n")}`,
+        type: "warning",
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleAddClick = () => {
-    // First, show the guard selection modal
-    setShowGuardSelectionModal(true);
+    if (!validateMandatoryFields()) return;
+
+    const tn = formData.trackingNumber.trim();
+    if (tn) {
+      (async () => {
+        try {
+          const checkRes = await fetch(`/api/packages/outgoing/details?trackingNumber=${encodeURIComponent(tn)}`);
+          if (checkRes.ok) {
+            setAlertModal({ isOpen: true, title: "Duplicate Tracking Number", message: `Tracking number ${tn} already exists. Please use a different tracking number.`, type: "error" });
+            return;
+          }
+        } catch {
+          // ignore network errors; server will validate on submit
+        }
+        setShowGuardSelectionModal(true);
+      })();
+    } else {
+      setShowGuardSelectionModal(true);
+    }
   };
 
   const handleGuardAvailable = () => {
-    // Close selection modal and show guard id modal
     setShowGuardSelectionModal(false);
     setShowGuardModal(true);
   };
 
   const handleNoGuardAvailable = () => {
-    // Close selection modal and show holding state modal
     setShowGuardSelectionModal(false);
     setShowHoldingStateModal(true);
   };
 
-  const handleSubmitWithGuard = async (guardId: string, time: string, date: string) => {
-    if (!formData.customerName) {
-      alert("Please select a Customer");
-      setShowGuardModal(false);
-      return;
-    }
-    if (!formData.trackingNumber.trim()) {
-      alert("Please enter a Tracking Number");
-      setShowGuardModal(false);
-      return;
+  const handleSubmitHoldingState = async (reason?: string) => {
+    // Pre-submit duplicate check for this tracking number
+    const tn = formData.trackingNumber.trim();
+    if (tn) {
+      try {
+        const checkRes = await fetch(`/api/packages/outgoing/details?trackingNumber=${encodeURIComponent(tn)}`);
+        if (checkRes.ok) {
+          setAlertModal({ isOpen: true, title: "Duplicate Tracking Number", message: `Tracking number ${tn} already exists. Please use a different tracking number.`, type: "error" });
+          return;
+        }
+      } catch {
+        // ignore network errors; server will validate on submit
+      }
     }
 
     setIsSubmitting(true);
 
-    const finalData = {
-      ...formData,
-      guardId: guardId.trim(),
-      time: time,
-      date: date,
-      mode: "single",
-      guardStatus: "verified",
+    const now = new Date();
+    const time = now.toLocaleTimeString();
+    const date = now.toLocaleDateString();
+    const emp = selectedEmployee;
+    if (!emp) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "No employee selected. Please select an employee before submitting to Holding.",
+        type: "warning",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    const basePayload: BaseOutgoingPackageData = {
+      trackingNumber: formData.trackingNumber.trim(),
+      mode: "single" as const,
+      customerName: formData.customerName?.trim(),
+      packageDescription: formData.packageDescription.trim(),
+      time,
+      date,
+      employeeId: emp.employeeId,
+      employeeName: emp.employeeName,
+      employeeCompany: emp.employeeCompany,
+      Department: emp.department,
     };
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      console.log("Single Outgoing Package Submitted (with Guard):", finalData);
+      const payload = buildHoldingOutgoingPackagePayload(basePayload);
+      await saveOutgoingPackage(payload);
+
+      setShowHoldingStateModal(false);
+      setShowGuardSelectionModal(false);
 
       setFormData({
         ...outgoingPackageDefaults,
-        customerName: "",
-        trackingNumber: "",
       });
+      setSelectedEmployee(null);
+      setSelectedCustomer(null);
+      setSelectedPackageDescription(null);
 
-      setShowGuardModal(false);
-      alert("Package added successfully and verified by guard!");
-    } catch (error) {
-      console.error("Submission error:", error);
-      alert("Failed to add package. Please try again.");
+      setAlertModal({
+        isOpen: true,
+        title: "Success",
+        message: reason
+          ? `Outgoing package submitted and moved to Holding (awaiting employee verification). Reason: ${reason}`
+          : "Outgoing package submitted and moved to Holding (awaiting employee verification).",
+        type: "success",
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: `Failed to submit package: ${errorMessage}`,
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSubmitHoldingState = async () => {
-    if (!formData.customerName) {
-      alert("Please select a Customer");
-      setShowHoldingStateModal(false);
-      return;
-    }
-    if (!formData.trackingNumber.trim()) {
-      alert("Please enter a Tracking Number");
-      setShowHoldingStateModal(false);
-      return;
+  const handleSubmitWithGuard = async (guardId: string, time: string, date: string) => {
+    // Pre-submit duplicate check for this tracking number
+    const tn = formData.trackingNumber.trim();
+    if (tn) {
+      try {
+        const checkRes = await fetch(`/api/packages/outgoing/details?trackingNumber=${encodeURIComponent(tn)}`);
+        if (checkRes.ok) {
+          setAlertModal({ isOpen: true, title: "Duplicate Tracking Number", message: `Tracking number ${tn} already exists. Please use a different tracking number.`, type: "error" });
+          return;
+        }
+      } catch {
+        // ignore network errors; server will validate on submit
+      }
     }
 
     setIsSubmitting(true);
 
-    const finalData = {
-      ...formData,
-      mode: "single",
-      guardStatus: "pending",
-      timestamp: new Date().toISOString(),
-    };
-
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      console.log("Single Outgoing Package Submitted (Holding State):", finalData);
+      const emp = selectedEmployee;
+      if (!emp) {
+        setAlertModal({
+          isOpen: true,
+          title: "Validation Error",
+          message: "No employee selected. Please select an employee before submitting.",
+          type: "warning",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const basePayload: BaseOutgoingPackageData = {
+        trackingNumber: formData.trackingNumber.trim(),
+        mode: "single" as const,
+        customerName: formData.customerName?.trim(),
+        packageDescription: formData.packageDescription.trim(),
+        time: time,
+        date: date,
+        employeeId: emp.employeeId,
+        employeeName: emp.employeeName,
+        employeeCompany: emp.employeeCompany,
+        Department: emp.department,
+      };
+
+      const payload = buildVerifiedOutgoingPackagePayload(basePayload, guardId.trim());
+      await saveOutgoingPackage(payload);
 
       setFormData({
         ...outgoingPackageDefaults,
-        customerName: "",
-        trackingNumber: "",
       });
+      setShowGuardSelectionModal(false);
+      setSelectedEmployee(null);
+      setSelectedCustomer(null);
+      setSelectedPackageDescription(null);
 
-      setShowHoldingStateModal(false);
-      alert("Package placed on hold. Awaiting guard verification.");
-    } catch (error) {
-      console.error("Submission error:", error);
-      alert("Failed to add package. Please try again.");
+      setShowGuardModal(false);
+      setAlertModal({
+        isOpen: true,
+        title: "Success",
+        message: "Outgoing package submitted successfully and verified by employee!",
+        type: "success",
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: `Failed to submit package: ${errorMessage}`,
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+  const handleEmployeeIdChange = (employeeId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      employeeId,
+    }));
+
+    if (!employeeId.trim()) {
+      setSelectedEmployee(null);
+      return;
+    }
+
+    setSelectedEmployee(null);
+  };
+
+  const lookupEmployeeByBarcode = async (employeeId: string) => {
+    const trimmedEmployeeId = employeeId.trim();
+
+    if (!trimmedEmployeeId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/employees/${encodeURIComponent(trimmedEmployeeId)}`);
+      const contentType = response.headers.get("content-type") || "";
+      let data: EmployeeApiResponse;
+      if (contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Unexpected non-JSON response from server: ${response.status} ${response.statusText} - ${text.slice(0,200)}`);
+      }
+
+      if (!response.ok || !data?.success || !data?.data) {
+        throw new Error(data?.message || "Employee not found");
+      }
+
+      const employee = data.data as EmployeeData;
+      setSelectedEmployee(employee);
+      setFormData((prev) => ({
+        ...prev,
+        employeeId: employee.employeeId || trimmedEmployeeId,
+      }));
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setSelectedEmployee(null);
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+      });
     }
   };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     field: string
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: e.target.value,
-    }));
+  ) =>{
+    setFormData((prev) => ({ ...prev, [field]: e.target.value, }));
   };
 
   return (
@@ -171,20 +321,11 @@ export default function SingleOutgoingPackagePage() {
 
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
-          <div className="flex items-center gap-6">
-            <div>
-              <h1 className="text-2xl md:text-4xl font-bold text-[#0c244c]">
-                Single Outgoing Package
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">Register a single package leaving the Company</p>
-            </div>
-            <Image 
-              src="/images/Outgoing (2).png" 
-              alt="Outgoing Package" 
-              width={192}
-              height={192}
-              className="object-contain shrink-0"
-            />
+          <div>
+            <h1 className="text-2xl md:text-4xl font-bold text-[#0c244c]">
+              Single Outgoing Package
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">Register a single package leaving the Company</p>
           </div>
           <div className="w-full md:w-auto">
             <DateTime />
@@ -200,17 +341,6 @@ export default function SingleOutgoingPackagePage() {
               Package Information
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
-              <div className="md:col-span-6">
-                <InputLabel label="Tracking Number *" />
-                <input
-                  type="text"
-                  className="form-input-clean"
-                  value={formData.trackingNumber}
-                  onChange={(e) => handleInputChange(e, "trackingNumber")}
-                  placeholder="Enter tracking number"
-                />
-              </div>
-
               <div className="md:col-span-4">
                 <InputLabel label="Package Type" />
                 <div className="w-full p-3 bg-[#e9ecef] border border-gray-300 rounded-lg text-center font-bold text-gray-500">
@@ -218,133 +348,121 @@ export default function SingleOutgoingPackagePage() {
                 </div>
               </div>
 
-              <div className="md:col-span-5 relative">
-                <InputLabel label="Customer Name *" />
-                <div className="relative">
-                  <select
-                    className="form-input-clean appearance-none cursor-pointer pr-10"
-                    value={formData.customerName}
-                    onChange={(e) => handleInputChange(e, "customerName")}
-                  >
-                    <option value="">Select Customer Name</option>
-                    {customerNames.map((customer) => (
-                      <option key={customer} value={customer}>
-                        {customer}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
+              <div className="md:col-span-6">
+                <InputLabel label="Tracking Number *" />
+                <input
+                  type="text"
+                  className="form-input-clean"
+                  value={formData.trackingNumber ?? ""}
+                  onChange={(e) => handleInputChange(e, "trackingNumber")}
+                  placeholder="Enter tracking number"
+                />
               </div>
 
-              <div className="md:col-span-12 relative">
-                <InputLabel label="Package Description" />
-                <div className="relative">
-                  <select
-                    className="form-input-clean appearance-none cursor-pointer pr-10"
-                    value={formData.description || ""}
-                    onChange={(e) => handleInputChange(e, "description")}
-                  >
-                    <option value="">Select Description</option>
-                    <option value="fragile">Fragile - Glassware</option>
-                    <option value="standard">Standard - Optical Parts</option>
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
+              <div className="md:col-span-6">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Customer Name *
+                </label>
+                <CustomerSelector
+                  value={selectedCustomer}
+                  onChange={(customer) => {
+                    setSelectedCustomer(customer);
+                    setFormData({
+                      ...formData,
+                      customerName: customer?.customerName || "",
+                    });
+                  }}
+                  placeholder="Select a customer..."
+                  required
+                  onError={(err) => setAlertModal({
+                    isOpen: true,
+                    title: "Error",
+                    message: err,
+                    type: "error",
+                  })}
+                />
               </div>
+
+              <div className="md:col-span-6">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Package Description *
+                </label>
+                <PackageDescriptionSelector
+                  value={selectedPackageDescription}
+                  onChange={(description) => {
+                    setSelectedPackageDescription(description);
+                    setFormData({
+                      ...formData,
+                      packageDescription: description?.packageDescription || "",
+                    });
+                  }}
+                  placeholder="Select package description..."
+                  required
+                  onError={(err) => setAlertModal({
+                    isOpen: true,
+                    title: "Error",
+                    message: err,
+                    type: "error",
+                  })}
+                />
+              </div>
+
             </div>
           </section>
 
           <hr className="border-gray-200" />
 
-          {/* Employee Details */}
-          <section>
-            <h2 className="text-xl font-semibold text-[#5a677a] mb-6">
-              Employee Details
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
-              <div className="md:col-span-5">
-                <InputLabel label="Employee Name" />
-                <input
-                  type="text"
-                  className="form-input-clean"
-                  value={formData.employeeName || ""}
-                  onChange={(e) => handleInputChange(e, "employeeName")}
-                  placeholder="Scan the Employee barcode"
-                />
-              </div>
-              <div className="md:col-span-3">
-                <InputLabel label="Employee ID" />
-                <input
-                  type="text"
-                  className="form-input-clean"
-                  value={formData.employeeId || ""}
-                  onChange={(e) => handleInputChange(e, "employeeId")}
-                  placeholder="Scan the Employee barcode"
-                />
-              </div>
-              <div className="md:col-span-4">
-                <InputLabel label="Department" />
-                <div className="relative">
-                  <select
-                    className="form-input-clean appearance-none cursor-pointer pr-10"
-                    value={formData.department || ""}
-                    onChange={(e) => handleInputChange(e, "department")}
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
+            <div className="md:col-span-6">
+              <InputLabel label="Scan Employee Barcode *" />
+              <input
+                type="text"
+                value={formData.employeeId}
+                placeholder="Scan Employee ID"
+                onChange={(e) => handleEmployeeIdChange(e.target.value)}
+                onBlur={(e) => {
+                  void lookupEmployeeByBarcode(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void lookupEmployeeByBarcode((e.currentTarget as HTMLInputElement).value);
+                  }
+                }}
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0084c8] font-mono text-lg"
+              />
+            </div>
+
+            <div className="md:col-span-6">
+              <InputLabel label="Employee Details" />
+              <div className="w-full min-h-32 p-4 bg-gray-50 border border-gray-300 rounded-lg">
+                {selectedEmployee ? (
+                  <div className="grid grid-cols-1 gap-3 text-sm text-gray-700">
+                    <div>
+                      <span className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Name</span>
+                      <div className="font-semibold text-[#0c244c]">{selectedEmployee.employeeName || "N/A"}</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <span className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Department</span>
+                        <div>{selectedEmployee.department || "N/A"}</div>
+                      </div>
+                      <div>
+                        <span className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Company</span>
+                        <div>{selectedEmployee.employeeCompany || "N/A"}</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex h-full min-h-24 items-center justify-center text-sm text-gray-500 text-center">
+                    No employee details yet. Scan a barcode to load them.
+                  </div>
+                )}
               </div>
             </div>
-          </section>
+          </div>
 
           <hr className="border-gray-200" />
-
-          {/* Delivery Details */}
-          <section>
-            <h2 className="text-xl font-semibold text-[#5a677a] mb-6">
-              Delivery Details
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-12">
-              <div className="md:col-span-5 relative">
-                <InputLabel label="Delivery Company" />
-                <div className="relative">
-                  <select
-                    className="form-input-clean appearance-none cursor-pointer pr-10"
-                    value={formData.deliveryCompany || ""}
-                    onChange={(e) => handleInputChange(e, "deliveryCompany")}
-                  >
-                    <option value="">Select Delivery Company</option>
-                    {deliveryCompanies.map((company) => (
-                      <option key={company} value={company}>
-                        {company}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
           {/* Buttons */}
           <div className="flex justify-center md:justify-end pt-4 pb-12 gap-4">
             <button
@@ -365,35 +483,37 @@ export default function SingleOutgoingPackagePage() {
         </form>
       </main>
 
-      {/* Guard Selection Modal - Choose if Guard is Available */}
-      <GuardSelectionModal
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+      <EmployeeSelectionModal
         isOpen={showGuardSelectionModal}
         onClose={() => setShowGuardSelectionModal(false)}
-        onGuardAvailable={handleGuardAvailable}
-        onNoGuardAvailable={handleNoGuardAvailable}
+        onEmployeeAvailable={handleGuardAvailable}
+        onNoEmployeeAvailable={handleNoGuardAvailable}
       />
-
-      {/* Guard ID Modal - If Guard is Available */}
-      <GuardIdModal
+      <EmployeeIdModal
         isOpen={showGuardModal}
         onClose={() => setShowGuardModal(false)}
         onSubmit={handleSubmitWithGuard}
         isSubmitting={isSubmitting}
       />
-
-      {/* Holding State Modal - If No Guard Available */}
       <HoldingStateModal
         isOpen={showHoldingStateModal}
         onClose={() => setShowHoldingStateModal(false)}
         onConfirm={handleSubmitHoldingState}
         isSubmitting={isSubmitting}
         packageDetails={{
-          customerName: formData.customerName || "Not Selected",
-          trackingNumber: formData.trackingNumber || "Not Entered",
-          employeeName: formData.employeeName,
+          customerName: selectedCustomer?.customerName || formData.customerName || "Outgoing Package",
+          trackingNumber: formData.trackingNumber || "N/A",
+          employeeName: selectedEmployee?.employeeName,
         }}
       />
-
       <style jsx>{`
         .form-input-clean {
           width: 100%;

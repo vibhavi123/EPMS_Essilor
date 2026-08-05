@@ -5,14 +5,15 @@ import Link from "next/link";
 import Image from "next/image";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
+import { PermissionGuard } from "@/hooks/usePermissions";
 
 export default function OutgoingPackageHubPage() {
   return (
-    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
-      <Sidebar />
-
-      <main className="flex-1 lg:ml-72 p-4 md:p-10 pt-24 lg:pt-10 transition-all duration-300">
-        <br />
+    <PermissionGuard permission="addOngoingPackage">
+      <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+        <Sidebar />
+        <main className="flex-1 lg:ml-72 p-4 md:p-10 pt-24 lg:pt-10 transition-all duration-300">
+          <br />
 
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
@@ -24,7 +25,7 @@ export default function OutgoingPackageHubPage() {
               <p className="text-sm text-gray-600 mt-1">Register packages that are leaving the Company</p>
             </div>
             <Image 
-              src="/images/Outgoing (2).png" 
+              src="/images/OutgoingPage.png" 
               alt="Outgoing Package" 
               width={192}
               height={192}
@@ -32,12 +33,10 @@ export default function OutgoingPackageHubPage() {
             />
           </div>
           <div className="w-full md:w-auto">
-            <DateTime />
+            <DateTime/>
           </div>
         </header>
-
         <hr className="border-gray-300 mb-10" />
-
         {/* Mode Selection Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
           {/* Single Package Card */}
@@ -84,5 +83,6 @@ export default function OutgoingPackageHubPage() {
         </div>
       </main>
     </div>
+    </PermissionGuard>
   );
 }

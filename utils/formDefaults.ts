@@ -28,26 +28,25 @@ export const incomingPackageDefaults: IncomingPackageFormData = {
 };
 
 export const outgoingPackageDefaults: OutgoingPackageFormData = {
+  trackingNumber: "",
   referenceNumber: "",
   customerName: "",
-  description: "",
+  packageDescription: "",
   deliveryPersonName: "",
   time: "",
   date: "",
   employeeName: "",
   employeeId: "",
-  department: "",
+  Department: "",
   employeeCompany: "",
   deliveryCompany: "",
-  vehicleNumber: "",
-  vehicleType: "",
 };
 
 export const addPackageDefaults: AddPackageFormData = {
   packageType: "incoming",
   trackingNumber: "",
   referenceNumber: "",
-  employeeId: 0,
+  employeeId: " ",
   employeeName: "",
   department: "",
   employeeCompany: "",
@@ -63,7 +62,7 @@ export const addPackageDefaults: AddPackageFormData = {
 export const incomingPackageVerificationDefaults: IncomingPackageVerificationFormData = {
   employeeCompany: "",
   employeeId: "",
-  department: "",
+  Department: "",
   time: "",
   date: "",
 };
@@ -75,7 +74,6 @@ export const outgoingPackageVerificationDefaults: OutgoingPackageVerificationFor
   vehicleNumber: "",
   deliveryPersonName: "",
   vehicleType: "",
-  nicNumber: "",
   time: "",
   date: "",
   deliveryCompany: "",

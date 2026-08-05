@@ -1,39 +1,28 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
+import AlertModal from "@/components/AlertModal";
 import GuardIdModal from "@/components/GuardIdModal";
 import GuardSelectionModal from "@/components/GuardSelectionModal";
 import HoldingStateModal from "@/components/HoldingStateModal";
+import CustomerSelector from "@/components/CustomerSelector";
+import DeliveryCompanySelector from "@/components/DeliveryCompanySelector";
+
 import { incomingPackageDefaults } from "@/utils/formDefaults";
 import { useNavigation } from "@/hooks/useNavigation";
+import {
+  savePackage,
+  buildVerifiedPackagePayload,
+  buildHoldingPackagePayload,
+} from "@/utils/apiClient";
 import { ChevronDown } from "lucide-react";
+import { normalizePlate, validateSriLankanPlate } from "@/utils/plateValidator";
+import { Customer, DeliveryCompany } from "@/utils/formTypes";
 import styles from "../styles.module.css";
 
-const vehicleTypes = ["Van", "Motorcycle", "Car", "Pickup"];
-const deliveryCompanies = [
-  "Vision Systems",
-  "Medical Systems",
-  "Tech Logistics",
-  "Doc Solutions",
-  "Express Delivery",
-  "Fast Track Courier",
-];
-
-const customers = [
-  "John Doe",
-  "Sarah Williams",
-  "Michael Chen",
-  "Emma Rodriguez",
-  "David Thompson",
-  "Lisa Patel",
-  "Robert Kim",
-  "Anna Garcia",
-  "James Wilson",
-  "Maria Lopez",
-];
+const vehicleTypes = ["Van", "Motorcycle", "Car", "Pickup", "Truck", "Three-Wheeler","Other"];
 
 export default function SingleIncomingPackagePage() {
   const nav = useNavigation();
@@ -41,23 +30,78 @@ export default function SingleIncomingPackagePage() {
     ...incomingPackageDefaults,
     customerName: "",
   }));
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedDeliveryCompany, setSelectedDeliveryCompany] = useState<DeliveryCompany | null>(null);
 
   const [showGuardSelectionModal, setShowGuardSelectionModal] = useState(false);
   const [showGuardModal, setShowGuardModal] = useState(false);
   const [showHoldingStateModal, setShowHoldingStateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "warning" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const validateMandatoryFields = () => {
+    const missingFields: string[] = [];
+
+    if (!formData.trackingNumber.trim()) missingFields.push("Tracking Number");
+    if (!selectedCustomer) missingFields.push("Customer Name");
+    if (!formData.deliveryCompany.trim()) missingFields.push("Delivery Company");
+    if (!formData.deliveryPersonName.trim()) missingFields.push("Delivery person name");
+    if (!formData.vehicleNumber.trim()) missingFields.push("Vehicle number");
+    if (!formData.vehicleType.trim()) missingFields.push("Vehicle Type");
+
+    if (missingFields.length > 0) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: `Please fill in all mandatory fields:\n\n${missingFields.map((f) => `• ${f}`).join("\n")}`,
+        type: "warning",
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleAddClick = () => {
-    if (!formData.trackingNumber.trim()) {
-      alert("Please enter a Tracking Number");
-      return;
+    if (!validateMandatoryFields()) return;
+
+    // Pre-check tracking number before proceeding
+    const tn = formData.trackingNumber.trim();
+    if (tn) {
+      (async () => {
+        try {
+          const checkRes = await fetch(`/api/packages/incoming/details?trackingNumber=${encodeURIComponent(tn)}`);
+          if (checkRes.ok) {
+            setAlertModal({ isOpen: true, title: "Duplicate Tracking Number", message: `Tracking number ${tn} already exists. Please use a different tracking number.`, type: "error" });
+            return;
+          }
+        } catch {
+          // ignore network errors; server will validate on submit
+        }
+
+        // Normalize & validate vehicle before proceeding
+        const normalizedVehicle = normalizePlate(formData.vehicleNumber);
+        if (!validateSriLankanPlate(normalizedVehicle).startsWith("Valid")) {
+          setAlertModal({ isOpen: true, title: "Invalid Vehicle", message: "Vehicle number format is invalid", type: "error" });
+          return;
+        }
+        setFormData((prev) => ({ ...prev, vehicleNumber: normalizedVehicle }));
+
+        // First, show the guard selection modal
+        setShowGuardSelectionModal(true);
+      })();
+    } else {
+      setShowGuardSelectionModal(true);
     }
-    if (!formData.customerName) {
-      alert("Please select a Customer");
-      return;
-    }
-    // First, show the guard selection modal
-    setShowGuardSelectionModal(true);
   };
 
   const handleGuardAvailable = () => {
@@ -73,60 +117,220 @@ export default function SingleIncomingPackagePage() {
   };
 
   const handleSubmitWithGuard = async (guardId: string, time: string, date: string) => {
+    if (!formData.deliveryCompany.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Please select Delivery Company",
+        type: "warning",
+      });
+      setShowGuardModal(false);
+      return;
+    }
+    if (!formData.deliveryPersonName.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Please enter Delivery person name",
+        type: "warning",
+      });
+      setShowGuardModal(false);
+      return;
+    }
+    if (!formData.vehicleNumber.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Please enter Vehicle number",
+        type: "warning",
+      });
+      setShowGuardModal(false);
+      return;
+    }
+    if (!formData.vehicleType.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Please select Vehicle Type",
+        type: "warning",
+      });
+      setShowGuardModal(false);
+      return;
+    }
+
+    // Pre-submit duplicate check for this tracking number
+    const tn = formData.trackingNumber.trim();
+    if (tn) {
+      try {
+        const checkRes = await fetch(`/api/packages/incoming/details?trackingNumber=${encodeURIComponent(tn)}`);
+        if (checkRes.ok) {
+          setAlertModal({ isOpen: true, title: "Duplicate Tracking Number", message: `Tracking number ${tn} already exists. Please use a different tracking number.`, type: "error" });
+          return;
+        }
+      } catch {
+        // ignore network errors; server will validate on submit
+      }
+    }
+
     setIsSubmitting(true);
-
-    const finalData = {
-      ...formData,
-      guardId: guardId.trim(),
-      time: time,
-      date: date,
-      mode: "single",
-      guardStatus: "verified",
-    };
-
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      console.log("✅ Single Package Submitted Successfully (with Guard):", finalData);
+      // Base package data (single mode uses only tracking number)
+      const normalizedVehicle = normalizePlate(formData.vehicleNumber);
+      const basePayload = {
+        trackingNumber: formData.trackingNumber.trim(),
+        mode: "single" as const,
+        customerName: formData.customerName.trim(),
+        time: time,
+        date: date,
+        deliveryCompany: formData.deliveryCompany.trim(),
+        deliveryPersonName: formData.deliveryPersonName.trim() || undefined,
+        vehicleNumber: normalizedVehicle || undefined,
+        vehicleType: formData.vehicleType.trim() || undefined,
+        remark: formData.remark.trim() || undefined,
+      };
 
+      // Build verified payload with guard info
+      const payload = buildVerifiedPackagePayload(basePayload, guardId);
+
+      // Save package via API
+      await savePackage(payload);
+
+      // Success
       setFormData({
         ...incomingPackageDefaults,
         customerName: "",
       });
+      setSelectedCustomer(null);
+      setSelectedDeliveryCompany(null);
 
       setShowGuardModal(false);
-      alert("Package submitted successfully and verified by guard!");
+      setAlertModal({
+        isOpen: true,
+        title: "Success",
+        message: `Pacakge submitted successfully!Guard ID, Verified by guard`,
+        type: "success",
+      });
     } catch (error) {
-      console.error("Submission error:", error);
-      alert("Failed to add package. Please try again.");
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to add package. Please try again.";
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSubmitHoldingState = async () => {
+    if (!formData.deliveryCompany.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Please select Delivery Company",
+        type: "warning",
+      });
+      setShowHoldingStateModal(false);
+      return;
+    }
+    if (!formData.deliveryPersonName.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Please enter Delivery person name",
+        type: "warning",
+      });
+      setShowHoldingStateModal(false);
+      return;
+    }
+    if (!formData.vehicleNumber.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Please enter Vehicle number",
+        type: "warning",
+      });
+      setShowHoldingStateModal(false);
+      return;
+    }
+    if (!formData.vehicleType.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Please select Vehicle Type",
+        type: "warning",
+      });
+      setShowHoldingStateModal(false);
+      return;
+    }
+
+    // Pre-submit duplicate check for this tracking number
+    const tn = formData.trackingNumber.trim();
+    if (tn) {
+      try {
+        const checkRes = await fetch(`/api/packages/incoming/details?trackingNumber=${encodeURIComponent(tn)}`);
+        if (checkRes.ok) {
+          setAlertModal({ isOpen: true, title: "Duplicate Tracking Number", message: `Tracking number ${tn} already exists. Please use a different tracking number.`, type: "error" });
+          return;
+        }
+      } catch {
+        // ignore network errors; server will validate on submit
+      }
+    }
+
     setIsSubmitting(true);
 
-    const finalData = {
-      ...formData,
-      mode: "single",
-      guardStatus: "pending",
-      timestamp: new Date().toISOString(),
-    };
-
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      console.log("✅ Single Package Submitted (Holding State):", finalData);
+      const now = new Date();
+      const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const date = now.toLocaleDateString();
 
+      // Base package data (single mode uses only tracking number)
+      const basePayload = {
+        trackingNumber: formData.trackingNumber.trim(),
+        mode: "single" as const,
+        customerName: formData.customerName.trim(),
+        time: time,
+        date: date,
+        deliveryCompany: formData.deliveryCompany.trim(),
+        deliveryPersonName: formData.deliveryPersonName.trim() || undefined,
+        vehicleNumber: formData.vehicleNumber.trim() || undefined,
+        vehicleType: formData.vehicleType.trim() || undefined,
+        remark: formData.remark.trim() || undefined,
+      };
+
+      // Build holding payload (no guard)
+      const payload = buildHoldingPackagePayload(basePayload);
+
+      // Save package via API
+      await savePackage(payload);
+
+      // Success
       setFormData({
         ...incomingPackageDefaults,
         customerName: "",
       });
+      setSelectedCustomer(null);
+      setSelectedDeliveryCompany(null);
 
       setShowHoldingStateModal(false);
-      alert("Package placed on hold awaiting guard verification.");
+      setAlertModal({
+        isOpen: true,
+        title: "Success",
+        message: `Package submitted successfully!,\n\nStatus: On Hold (Awaiting Guard Verification)`,
+        type: "success",
+      });
     } catch (error) {
-      console.error("Submission error:", error);
-      alert("Failed to add package. Please try again.");
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to add package. Please try again.";
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -150,20 +354,11 @@ export default function SingleIncomingPackagePage() {
 
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
-          <div className="flex items-center gap-6">
-            <div>
-              <h1 className="text-2xl md:text-4xl font-bold text-[#0c244c]">
-                Single Incoming Package
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">Register a single package arriving at the Company</p>
-            </div>
-            <Image 
-              src="/images/Incoming.png" 
-              alt="Incoming Package" 
-              width={192}
-              height={192}
-              className="object-contain shrink-0"
-            />
+          <div>
+            <h1 className="text-2xl md:text-4xl font-bold text-[#0c244c]">
+              Single Incoming Package
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">Register a single package arriving at the Company</p>
           </div>
           <div className="w-full md:w-auto">
             <DateTime />
@@ -198,46 +393,31 @@ export default function SingleIncomingPackagePage() {
               </div>
 
               <div className="md:col-span-12 lg:col-span-6">
-                <InputLabel label="Customer Name *" />
-                <div className="relative">
-                  <select
-                    className={`${styles["form-input-custom"]} appearance-none cursor-pointer pr-10`}
-                    value={formData.customerName}
-                    onChange={(e) => handleInputChange(e, "customerName")}
-                  >
-                    <option value="">Select Customer</option>
-                    {customers.map((customer) => (
-                      <option key={customer} value={customer}>
-                        {customer}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <hr className="border-gray-200" />
-          <section>
-            <h2 className="text-xl md:text-2xl font-semibold text-[#4a5568] mb-6">
-              Employee Information (Optional)
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
-              <div className="md:col-span-8 lg:col-span-6">
-                <InputLabel label="Employee Name" />
-                <input
-                  type="text"
-                  className={styles["form-input-custom"]}
-                  value={formData.employeeName}
-                  onChange={(e) => handleInputChange(e, "employeeName")}
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Customer Name *
+                </label>
+                <CustomerSelector
+                  value={selectedCustomer}
+                  onChange={(customer) => {
+                    setSelectedCustomer(customer);
+                    setFormData({
+                      ...formData,
+                      customerName: customer?.customerName || "",
+                    });
+                  }}
+                  placeholder="Select a customer..."
+                  required
+                  onError={(err) => setAlertModal({
+                    isOpen: true,
+                    title: "Error",
+                    message: err,
+                    type: "error",
+                  })}
                 />
               </div>
             </div>
           </section>
+
           <hr className="border-gray-200" />
 
           {/* Delivery Details */}
@@ -247,29 +427,29 @@ export default function SingleIncomingPackagePage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
               <div className="relative">
-                <InputLabel label="Delivery Company" />
-                <div className="relative">
-                  <select
-                    className={`${styles["form-input-custom"]} appearance-none cursor-pointer pr-10`}
-                    value={formData.deliveryCompany}
-                    onChange={(e) => handleInputChange(e, "deliveryCompany")}
-                  >
-                    <option value="">Select Delivery Company</option>
-                    {deliveryCompanies.map((company) => (
-                      <option key={company} value={company}>
-                        {company}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
+                <InputLabel label="Delivery Company *" />
+                <DeliveryCompanySelector
+                  value={selectedDeliveryCompany}
+                  onChange={(company) => {
+                    setSelectedDeliveryCompany(company);
+                    setFormData({
+                      ...formData,
+                      deliveryCompany: company?.deliveryCompany || "",
+                    });
+                  }}
+                  placeholder="Select delivery company..."
+                  required
+                  onError={(err) => setAlertModal({
+                    isOpen: true,
+                    title: "Error",
+                    message: err,
+                    type: "error",
+                  })}
+                />
               </div>
 
               <div>
-                <InputLabel label="Delivery person name" />
+                <InputLabel label="Delivery person name *" />
                 <input
                   type="text"
                   className={styles["form-input-custom"]}
@@ -279,7 +459,7 @@ export default function SingleIncomingPackagePage() {
               </div>
 
               <div>
-                <InputLabel label="Vehicle number" />
+                <InputLabel label="Vehicle number *" />
                 <input
                   type="text"
                   className={styles["form-input-custom"]}
@@ -289,7 +469,7 @@ export default function SingleIncomingPackagePage() {
               </div>
 
               <div className="relative">
-                <InputLabel label="Vehicle Type" />
+                <InputLabel label="Vehicle Type *" />
                 <div className="relative">
                   <select
                     className={`${styles["form-input-custom"]} appearance-none cursor-pointer pr-10`}
@@ -379,6 +559,15 @@ export default function SingleIncomingPackagePage() {
           customerName: formData.customerName,
           trackingNumber: formData.trackingNumber,
         }}
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
       />
     </div>
   );

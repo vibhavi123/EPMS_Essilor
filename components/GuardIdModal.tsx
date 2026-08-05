@@ -37,6 +37,8 @@ export default function GuardIdModal({
   package: selectedPackage,
 }: GuardIdModalProps) {
   const [guardId, setGuardId] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
   const guardInputRef = useRef<HTMLInputElement>(null);
 
   // Compute dateTime reactively when modal opens (not state)
@@ -56,12 +58,32 @@ export default function GuardIdModal({
   }, [isOpen]);
 
   const handleSubmit = () => {
-    if (!guardId.trim()) {
-      alert("Please enter Guard ID");
+    const candidate = guardId.trim();
+    setValidationError(null);
+    if (!candidate) {
+      setValidationError("Please enter Guard ID");
       return;
     }
-    onSubmit(guardId, dateTime.time, dateTime.date);
-    setGuardId("");
+
+    // Validate with server
+    void (async () => {
+      try {
+        setValidating(true);
+        const res = await fetch(`/api/guards/validate?accessId=${encodeURIComponent(candidate)}`);
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          setValidationError(json?.message || "Guard ID not found");
+          return;
+        }
+
+        onSubmit(candidate, dateTime.time, dateTime.date);
+        setGuardId("");
+      } catch (err) {
+        setValidationError("Failed to validate Guard ID");
+      } finally {
+        setValidating(false);
+      }
+    })();
   };
 
   const handleClose = () => {
@@ -129,6 +151,9 @@ export default function GuardIdModal({
               className="w-full px-5 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0084c8] text-lg"
               disabled={isSubmitting}
             />
+            {validationError && (
+              <p className="mt-2 text-sm text-red-600">{validationError}</p>
+            )}
           </div>
         </div>
 
@@ -143,10 +168,10 @@ export default function GuardIdModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || !guardId.trim()}
+            disabled={isSubmitting || validating || !guardId.trim()}
             className="flex-1 py-3 bg-[#0084c8] hover:bg-[#0071ad] disabled:bg-gray-400 text-white font-bold rounded-xl transition-all active:scale-95"
           >
-            {isSubmitting ? "Adding..." : "Confirm"}
+            {isSubmitting || validating ? "Checking..." : "Confirm"}
           </button>
         </div>
       </div>

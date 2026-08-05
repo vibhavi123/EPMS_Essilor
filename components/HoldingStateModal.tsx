@@ -69,15 +69,6 @@ export default function HoldingStateModal({
 
         {/* Body */}
         <div className="p-6 space-y-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-gray-700 mb-3">
-              This package will be placed in a <span className="font-bold text-[#0c244c]">holding state</span> and requires <span className="font-bold">guard verification</span> before it can be released.
-            </p>
-            <p className="text-sm text-gray-600">
-              A guard will need to verify and sign off on this package later.
-            </p>
-          </div>
-
           {/* Package Summary */}
           <div className="space-y-3">
             <h4 className="font-semibold text-[#0c244c]">Package Details:</h4>
@@ -101,24 +92,6 @@ export default function HoldingStateModal({
                 <span className="font-semibold text-[#0c244c]"> HOLDING</span>
               </div>
             </div>
-          </div>
-
-          {/* Holding Reason */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-[#0c244c]">
-              Reason for Holding (optional)
-            </label>
-            <textarea
-              value={holdingReason}
-              onChange={(e) => setHoldingReason(e.target.value)}
-              placeholder="Enter reason for placing this package on hold (e.g., Pending damage inspection, Awaiting customer confirmation, Address verification needed)"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0c244c] text-sm resize-none"
-              rows={3}
-              disabled={isSubmitting}
-            />
-            <p className="text-xs text-gray-500">
-              This will help guards understand why this package is in holding state
-            </p>
           </div>
         </div>
 

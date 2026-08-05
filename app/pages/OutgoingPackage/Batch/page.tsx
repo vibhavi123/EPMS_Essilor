@@ -1,174 +1,338 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
+import React, { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
-import GuardIdModal from "@/components/GuardIdModal";
-import GuardSelectionModal from "@/components/GuardSelectionModal";
+import AlertModal from "@/components/AlertModal";
+import EmployeeIdModal from "@/components/EmployeeIdModal";
+import EmployeeSelectionModal from "@/components/EmployeeSelectionModal";
 import HoldingStateModal from "@/components/HoldingStateModal";
+import CustomerSelector from "@/components/CustomerSelector";
+import PackageDescriptionSelector from "@/components/PackageDescriptionSelector";
 import { outgoingPackageDefaults } from "@/utils/formDefaults";
-import { BatchPackage } from "@/utils/formTypes";
-import { generateReferenceNumber } from "@/utils/referenceNumberGenerator";
+import { BatchPackage, Customer, EmployeeData, PackageDescription } from "@/utils/formTypes";
+import { fetchNextReferenceNumber } from "@/utils/idSequenceClient";
 import { useNavigation } from "@/hooks/useNavigation";
-import { ChevronDown } from "lucide-react";
-
-const customerNames = [
-  "Vision care panadura",
-  "Medical Supplies Ltd",
-  "Electronics Hub",
-  "Document Services",
-  "Tech Solutions",
-  "Vision Systems",
-];
-
-const deliveryCompanies = [
-  "Vision Systems",
-  "Medical Systems",
-  "Tech Logistics",
-  "Doc Solutions",
-  "Express Delivery",
-  "Fast Track Courier",
-];
-
-const departments = [
-  "Logistics",
-  "Dispatch",
-  "Warehouse",
-  "Operations",
-  "Administration",
-  "Sales",
-];
+import {
+  saveOutgoingPackage,
+  buildVerifiedOutgoingPackagePayload,
+  buildHoldingOutgoingPackagePayload,
+  type BaseOutgoingPackageData,
+} from "@/utils/apiClient";
+import { /* ChevronDown */ } from "lucide-react";
 
 export default function BatchOutgoingPackagePage() {
   const nav = useNavigation();
-  const [formData, setFormData] = useState(() => ({
-    ...outgoingPackageDefaults,
-    referenceNumber: generateReferenceNumber(),
-    customerName: "",
-    trackingNumber: "",
-  }));
+  const [formData, setFormData] = useState(() => ({...outgoingPackageDefaults, referenceNumber: "", customerName: "", trackingNumber: "", }));
 
   const [batchPackages, setBatchPackages] = useState<BatchPackage[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeData | null>(null);
+  const [selectedPackageDescription, setSelectedPackageDescription] = useState<PackageDescription | null>(null);
   const [showGuardSelectionModal, setShowGuardSelectionModal] = useState(false);
   const [showGuardModal, setShowGuardModal] = useState(false);
   const [showHoldingStateModal, setShowHoldingStateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "warning" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
 
-  const handleAddToBatch = () => {
-    if (!formData.trackingNumber.trim()) {
-      alert("Please enter a Tracking Number");
-      return;
+  const loadReferenceNumber = async () => {
+    try {
+      const nextReferenceNumber = await fetchNextReferenceNumber();
+      setFormData((prev) => ({ ...prev, referenceNumber: nextReferenceNumber }));
+      return nextReferenceNumber;
+    } catch {
+      setFormData((prev) => ({ ...prev, referenceNumber: "" }));
+      return "";
+    }
+  };
+
+  useEffect(() => {
+    void loadReferenceNumber();
+  }, []);
+
+  const validateBatchPackageFields = () => {
+    const missingFields: string[] = [];
+
+    if (!formData.trackingNumber.trim()) missingFields.push("Tracking Number");
+    if (!selectedCustomer) missingFields.push("Customer Name");
+    if (!selectedPackageDescription) missingFields.push("Package Description");
+    if (!selectedEmployee) missingFields.push("Employee");
+    if (selectedEmployee && !selectedEmployee.employeeId?.trim()) missingFields.push("Employee ID (from selected employee)");
+
+    if (missingFields.length > 0) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: `Please fill in all mandatory fields:\n\n${missingFields.map((f) => `• ${f}`).join("\n")}`,
+        type: "warning",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleAddToBatch = async () => {
+    if (!validateBatchPackageFields()) return;
+
+    const tn = String(formData.trackingNumber || "").trim();
+    if (tn) {
+      try {
+        const checkRes = await fetch(`/api/packages/outgoing/details?trackingNumber=${encodeURIComponent(tn)}`);
+        if (checkRes.ok) {
+          setAlertModal({ isOpen: true, title: "Duplicate Tracking Number", message: `Tracking number ${tn} already exists. Please use a different tracking number.`, type: "error" });
+          return;
+        }
+      } catch {
+        // ignore network errors; server will validate on submit
+      }
     }
 
     const newPackage: BatchPackage = {
       id: Date.now(),
       trackingNumber: formData.trackingNumber,
-      customerName: formData.customerName,
-      description: formData.description,
-      employeeName: formData.employeeName,
-      employeeId: formData.employeeId,
-      department: formData.department,
-      deliveryCompany: formData.deliveryCompany,
+      customerName: selectedCustomer!.customerName,
+      packageDescription: selectedPackageDescription!.packageDescription,
+      employeeName: selectedEmployee!.employeeName,
+      employeeId: selectedEmployee!.employeeId,
+      department: selectedEmployee!.department,
+      employeeCompany: selectedEmployee!.employeeCompany,
     };
 
     setBatchPackages([...batchPackages, newPackage]);
 
-    // Reset only tracking number for next entry
-    setFormData((prev) => ({
-      ...prev,
+    // Only reset Tracking Number for next entry
+    setFormData((prev) => ({ 
+      ...prev, 
       trackingNumber: "",
     }));
+  };
+
+  const handleAddToBatchWithEnter = () => {
+    handleAddToBatch();
   };
 
   const handleRemoveFromBatch = (id: number) => {
     setBatchPackages(batchPackages.filter((pkg) => pkg.id !== id));
   };
 
+  const findDuplicateTrackingNumbers = () => {
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+
+    batchPackages.forEach((pkg) => {
+      const trackingNumber = pkg.trackingNumber.trim();
+      if (!trackingNumber) {
+        return;
+      }
+
+      if (seen.has(trackingNumber)) {
+        duplicates.add(trackingNumber);
+        return;
+      }
+
+      seen.add(trackingNumber);
+    });
+
+    return Array.from(duplicates);
+  };
+
   const handleSubmitClick = () => {
     if (batchPackages.length === 0) {
-      alert("Please add at least one package to the batch");
+      setAlertModal({
+        isOpen: true,
+        title: "Batch Empty",
+        message: "Please add at least one package to the batch",
+        type: "warning",
+      });
       return;
     }
-    // First, show the guard selection modal
+
+    const duplicateTrackingNumbers = findDuplicateTrackingNumbers();
+    if (duplicateTrackingNumbers.length > 0) {
+      setAlertModal({
+        isOpen: true,
+        title: "Duplicate Tracking Number",
+        message: `Please remove duplicate tracking number before submitting:\n\n${duplicateTrackingNumbers.map((trackingNumber) => `• ${trackingNumber}`).join("\n")}`,
+        type: "warning",
+      });
+      return;
+    }
+
     setShowGuardSelectionModal(true);
   };
 
   const handleGuardAvailable = () => {
-    // Close selection modal and show guard id modal
     setShowGuardSelectionModal(false);
     setShowGuardModal(true);
   };
 
   const handleNoGuardAvailable = () => {
-    // Close selection modal and show holding state modal
+    if (!selectedEmployee?.employeeId?.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Selected employee is missing an Employee ID",
+        type: "warning",
+      });
+      return;
+    }
+
     setShowGuardSelectionModal(false);
     setShowHoldingStateModal(true);
   };
 
-  const handleSubmitWithGuard = async (guardId: string, time: string, date: string) => {
+  const handleSubmitHoldingState = async (reason?: string) => {
+    if (!selectedEmployee?.employeeId?.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Selected employee is missing an Employee ID",
+        type: "warning",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const finalData = {
-      referenceNumber: formData.referenceNumber,
-      packages: batchPackages,
-      guardId: guardId.trim(),
-      time: time,
-      date: date,
-      mode: "batch",
-      guardStatus: "verified",
-    };
+    const now = new Date();
+    const time = now.toLocaleTimeString();
+    const date = now.toLocaleDateString();     
+      // proceed with submit
+      try {
+      const batchReferenceNumber = formData.referenceNumber || (await loadReferenceNumber());
 
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      console.log("Batch Outgoing Packages Submitted (with Guard):", finalData);
+      // Submit each package in holding state (no guard available)
+      const submitPromises = batchPackages.map((pkg) => {
+        const basePayload: BaseOutgoingPackageData = {
+          trackingNumber: pkg.trackingNumber,
+          referenceNumber: batchReferenceNumber,
+          mode: "batch" as const,
+          customerName: pkg.customerName,
+          packageDescription: pkg.packageDescription || "",
+          time: time,
+          date: date,
+          employeeId: pkg.employeeId || undefined,
+          employeeName: pkg.employeeName,
+          employeeCompany: pkg.employeeCompany,
+          Department: pkg.department,
+        };
+
+        const payload = buildHoldingOutgoingPackagePayload(basePayload);
+        return saveOutgoingPackage(payload);
+      });
+
+      await Promise.all(submitPromises);
 
       setFormData({
         ...outgoingPackageDefaults,
-        referenceNumber: generateReferenceNumber(),
-        customerName: "",
+        referenceNumber: "",
         trackingNumber: "",
       });
       setBatchPackages([]);
+      setSelectedEmployee(null);
+      setSelectedCustomer(null);
+      setSelectedPackageDescription(null);
 
-      setShowGuardModal(false);
-      alert(`Batch submitted successfully and verified by guard! ${batchPackages.length} packages.`);
-    } catch (error) {
-      console.error("Submission error:", error);
-      alert("Failed to submit batch. Please try again.");
+      await loadReferenceNumber();
+
+      setShowHoldingStateModal(false);
+
+      setAlertModal({
+        isOpen: true,
+        title: "Success",
+        message: reason
+          ? `Batch submitted and moved to Holding (awaiting employee verification). ${batchPackages.length} packages. Reason: ${reason}`
+          : `Batch submitted and moved to Holding (awaiting employee verification). ${batchPackages.length} packages.`,
+        type: "success",
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: `Failed to submit batch: ${errorMessage}`,
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSubmitHoldingState = async () => {
+  const handleSubmitWithGuard = async (guardId: string, time: string, date: string) => {
+    if (!selectedEmployee?.employeeId?.trim()) {
+      setAlertModal({
+        isOpen: true,
+        title: "Validation Error",
+        message: "Selected employee is missing an Employee ID",
+        type: "warning",
+      });
+      setShowGuardModal(false);
+      return;
+    }
     setIsSubmitting(true);
 
-    const finalData = {
-      referenceNumber: formData.referenceNumber,
-      packages: batchPackages,
-      mode: "batch",
-      guardStatus: "pending",
-      timestamp: new Date().toISOString(),
-    };
-
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      console.log("Batch Outgoing Packages Submitted (Holding State):", finalData);
+      const batchReferenceNumber = formData.referenceNumber || (await loadReferenceNumber());
+
+      // Submit each package in the batch
+      const submitPromises = batchPackages.map((pkg) => {
+        const basePayload: BaseOutgoingPackageData = {
+          trackingNumber: pkg.trackingNumber,
+          referenceNumber: batchReferenceNumber,
+          mode: "batch" as const,
+          customerName: pkg.customerName,
+          packageDescription: pkg.packageDescription || "",
+          time: time,
+          date: date,
+          employeeId: pkg.employeeId || undefined,
+          employeeName: pkg.employeeName,
+          employeeCompany: pkg.employeeCompany,
+          Department: pkg.department,
+        };
+
+        const payload = buildVerifiedOutgoingPackagePayload(basePayload, guardId.trim());
+        return saveOutgoingPackage(payload);
+      });
+
+      await Promise.all(submitPromises);
 
       setFormData({
         ...outgoingPackageDefaults,
-        referenceNumber: generateReferenceNumber(),
-        customerName: "",
+        referenceNumber: "",
         trackingNumber: "",
       });
       setBatchPackages([]);
+      setSelectedEmployee(null);
+      setSelectedCustomer(null);
+      setSelectedPackageDescription(null);
 
-      setShowHoldingStateModal(false);
-      alert(`Batch placed on hold. ${batchPackages.length} packages awaiting guard verification.`);
-    } catch (error) {
-      console.error("Submission error:", error);
-      alert("Failed to submit batch. Please try again.");
+      await loadReferenceNumber();
+
+      setShowGuardModal(false);
+      setAlertModal({
+        isOpen: true,
+        title: "Success",
+        message: `Batch submitted successfully and verified by employee! ${batchPackages.length} packages.`,
+        type: "success",
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: `Failed to submit batch: ${errorMessage}`,
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -184,6 +348,74 @@ export default function BatchOutgoingPackagePage() {
     }));
   };
 
+  const handleEmployeeIdChange = (employeeId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      employeeId,
+    }));
+
+    if (!employeeId.trim()) {
+      setSelectedEmployee(null);
+      setFormData((prev) => ({
+        ...prev,
+        employeeName: "",
+        employeeCompany: "",
+        Department: "",
+      }));
+      return;
+    }
+
+    setSelectedEmployee(null);
+    setFormData((prev) => ({
+      ...prev,
+      employeeName: "",
+      employeeCompany: "",
+      Department: "",
+    }));
+  };
+
+  const lookupEmployeeByBarcode = async (employeeId: string) => {
+    const trimmedEmployeeId = employeeId.trim();
+
+    if (!trimmedEmployeeId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/employees/${encodeURIComponent(trimmedEmployeeId)}`);
+      const data = await response.json();
+
+      if (!response.ok || !data?.success || !data?.data) {
+        throw new Error(data?.message || "Employee not found");
+      }
+
+      const employee = data.data as EmployeeData;
+      setSelectedEmployee(employee);
+      setFormData((prev) => ({
+        ...prev,
+        employeeId: employee.employeeId || trimmedEmployeeId,
+        employeeName: employee.employeeName || "",
+        employeeCompany: employee.employeeCompany || "",
+        Department: employee.department || "",
+      }));
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setSelectedEmployee(null);
+      setFormData((prev) => ({
+        ...prev,
+        employeeName: "",
+        employeeCompany: "",
+        Department: "",
+      }));
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+      });
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
       <Sidebar />
@@ -193,20 +425,11 @@ export default function BatchOutgoingPackagePage() {
 
         {/* Header Section */}
         <header className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
-          <div className="flex items-center gap-6">
-            <div>
-              <h1 className="text-2xl md:text-4xl font-bold text-[#0c244c]">
-                Batch Outgoing Packages
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">Register multiple packages with one Reference Number</p>
-            </div>
-            <Image 
-              src="/images/Outgoing (2).png" 
-              alt="Batch Outgoing Packages" 
-              width={192}
-              height={192}
-              className="object-contain shrink-0"
-            />
+          <div>
+            <h1 className="text-2xl md:text-4xl font-bold text-[#0c244c]">
+              Batch Outgoing Packages
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">Register multiple packages with one Reference Number</p>
           </div>
           <div className="w-full md:w-auto">
             <DateTime />
@@ -216,10 +439,10 @@ export default function BatchOutgoingPackagePage() {
         <hr className="border-gray-300 mb-10" />
 
         <form className="space-y-10 max-w-7xl">
-          {/* Batch Reference */}
+          {/* Section 1: Batch Reference & Tracking */}
           <section>
             <h2 className="text-xl font-semibold text-[#5a677a] mb-6">
-              Batch Information
+               Batch Reference & Tracking
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
               <div className="md:col-span-6">
@@ -227,9 +450,20 @@ export default function BatchOutgoingPackagePage() {
                 <input
                   type="text"
                   className="form-input-clean bg-[#e9ecef]"
-                  value={formData.referenceNumber}
-                  placeholder="Auto-generated"
+                  value={formData.referenceNumber ?? ""}
+                  placeholder="Generated on submit"
                   readOnly
+                />
+              </div>
+              <div className="md:col-span-6">
+                <InputLabel label="Tracking Number *" />
+                <input
+                  type="text"
+                  className="form-input-clean"
+                  value={formData.trackingNumber ?? ""}
+                  onChange={(e) => handleInputChange(e, "trackingNumber")}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddToBatchWithEnter()}
+                  placeholder="Enter tracking number"
                 />
               </div>
             </div>
@@ -237,10 +471,10 @@ export default function BatchOutgoingPackagePage() {
 
           <hr className="border-gray-200" />
 
-          {/* Package Information */}
+          {/* Section 2: Package Details */}
           <section>
             <h2 className="text-xl font-semibold text-[#5a677a] mb-6">
-              Add Package to Batch
+              Package Details
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
               <div className="md:col-span-4">
@@ -250,142 +484,125 @@ export default function BatchOutgoingPackagePage() {
                 </div>
               </div>
 
-              <div className="md:col-span-5 relative">
-                <InputLabel label="Customer Name" />
-                <div className="relative">
-                  <select
-                    className="form-input-clean appearance-none cursor-pointer pr-10"
-                    value={formData.customerName}
-                    onChange={(e) => handleInputChange(e, "customerName")}
-                  >
-                    <option value="">Select Customer Name</option>
-                    {customerNames.map((customer) => (
-                      <option key={customer} value={customer}>
-                        {customer}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
-              </div>
-
-              <div className="md:col-span-12 relative">
-                <InputLabel label="Package Description" />
-                <div className="relative">
-                  <select
-                    className="form-input-clean appearance-none cursor-pointer pr-10"
-                    value={formData.description || ""}
-                    onChange={(e) => handleInputChange(e, "description")}
-                  >
-                    <option value="">Select Description</option>
-                    <option value="fragile">Fragile - Glassware</option>
-                    <option value="standard">Standard - Optical Parts</option>
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
-              </div>
-
-              <div className="md:col-span-5">
-                <InputLabel label="Employee Name" />
-                <input
-                  type="text"
-                  className="form-input-clean"
-                  value={formData.employeeName || ""}
-                  onChange={(e) => handleInputChange(e, "employeeName")}
-                  placeholder="Scan the Employee barcode"
-                />
-              </div>
-              <div className="md:col-span-3">
-                <InputLabel label="Employee ID" />
-                <input
-                  type="text"
-                  className="form-input-clean"
-                  value={formData.employeeId || ""}
-                  onChange={(e) => handleInputChange(e, "employeeId")}
-                  placeholder="Scan the Employee barcode"
-                />
-              </div>
               <div className="md:col-span-4">
-                <InputLabel label="Department" />
-                <div className="relative">
-                  <select
-                    className="form-input-clean appearance-none cursor-pointer pr-10"
-                    value={formData.department || ""}
-                    onChange={(e) => handleInputChange(e, "department")}
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
-              </div>
-
-              <div className="md:col-span-5 relative">
-                <InputLabel label="Delivery Company" />
-                <div className="relative">
-                  <select
-                    className="form-input-clean appearance-none cursor-pointer pr-10"
-                    value={formData.deliveryCompany || ""}
-                    onChange={(e) => handleInputChange(e, "deliveryCompany")}
-                  >
-                    <option value="">Select Delivery Company</option>
-                    {deliveryCompanies.map((company) => (
-                      <option key={company} value={company}>
-                        {company}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
-                  />
-                </div>
-              </div>
-              <div className="md:col-span-6">
-                <InputLabel label="Tracking Number *" />
-                <input
-                  type="text"
-                  className="form-input-clean"
-                  value={formData.trackingNumber}
-                  onChange={(e) => handleInputChange(e, "trackingNumber")}
-                  placeholder="Enter tracking number"
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Customer Name *
+                </label>
+                <CustomerSelector
+                  value={selectedCustomer}
+                  onChange={(customer) => {
+                    setSelectedCustomer(customer);
+                    setFormData({
+                      ...formData,
+                      customerName: customer?.customerName || "",
+                    });
+                  }}
+                  placeholder="Select a customer..."
+                  required
+                  onError={(err) => setAlertModal({
+                    isOpen: true,
+                    title: "Error",
+                    message: err,
+                    type: "error",
+                  })}
                 />
               </div>
 
-            </div>
+              <div className="md:col-span-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Package Description *
+                </label>
+                <PackageDescriptionSelector
+                  value={selectedPackageDescription}
+                  onChange={(description) => {
+                    setSelectedPackageDescription(description);
+                    setFormData({
+                      ...formData,
+                      packageDescription: description?.packageDescription || "",
+                    });
+                  }}
+                  placeholder="Select package description..."
+                  required
+                  onError={(err) => setAlertModal({
+                    isOpen: true,
+                    title: "Error",
+                    message: err,
+                    type: "error",
+                  })}
+                />
+              </div>
 
-            {/* Add to Batch Button */}
-            <div className="flex justify-end pt-6 gap-4">
-              <button
-                type="button"
-                onClick={handleAddToBatch}
-                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-lg transition-all active:scale-95"
-              >
-                Add to Batch
-              </button>
+              <div className="md:col-span-6">
+                <InputLabel label="Scan Employee Barcode *" />
+                <input
+                  type="text"
+                  value={formData.employeeId}
+                  placeholder="Scan Employee ID"
+                  onChange={(e) => handleEmployeeIdChange(e.target.value)}
+                  onBlur={(e) => {
+                    void lookupEmployeeByBarcode(e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void lookupEmployeeByBarcode((e.currentTarget as HTMLInputElement).value);
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0084c8] font-mono text-lg"
+                />
+              </div>
+
+              <div className="md:col-span-6">
+                <InputLabel label="Employee Details" />
+                <div className="w-full min-h-32 p-4 bg-gray-50 border border-gray-300 rounded-lg">
+                  {selectedEmployee ? (
+                    <div className="grid grid-cols-1 gap-3 text-sm text-gray-700">
+                      <div>
+                        <span className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Name</span>
+                        <div className="font-semibold text-[#0c244c]">{selectedEmployee.employeeName || "N/A"}</div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <span className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Department</span>
+                          <div>{selectedEmployee.department || "N/A"}</div>
+                        </div>
+                        <div>
+                          <span className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Company</span>
+                          <div>{selectedEmployee.employeeCompany || "N/A"}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-full min-h-24 items-center justify-center text-sm text-gray-500 text-center">
+                      No employee details yet. Scan a barcode to load them.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Delivery Company removed from this section per UX request */}
             </div>
           </section>
 
-          {/* Batch Packages List */}
+          <hr className="border-gray-200" />
+
+          {/* Add to Batch Button */}
+          <div className="flex justify-end pt-6 gap-4">
+            <button
+              type="button"
+              onClick={handleAddToBatch}
+              className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-lg transition-all active:scale-95"
+            >
+              Add to Batch
+            </button>
+          </div>
+
+          <hr className="border-gray-200" />
           {batchPackages.length > 0 && (
             <>
-              <hr className="border-gray-200" />
               <section>
                 <h2 className="text-xl font-semibold text-[#5a677a] mb-6">
-                   Packages in Batch ({batchPackages.length})
+                    Packages in Batch ({batchPackages.length})
                 </h2>
                 <div className="space-y-3">
                   {batchPackages.map((pkg: BatchPackage) => (
@@ -393,11 +610,7 @@ export default function BatchOutgoingPackagePage() {
                       <div className="flex-1">
                         <p className="font-bold text-[#0c244c]">{pkg.trackingNumber}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFromBatch(pkg.id)}
-                        className="ml-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition-all active:scale-95"
-                      >
+                      <button type="button" onClick={() => handleRemoveFromBatch(pkg.id)} className="ml-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition-all active:scale-95" >
                         Remove
                       </button>
                     </div>
@@ -428,32 +641,35 @@ export default function BatchOutgoingPackagePage() {
         </form>
       </main>
 
-      {/* Guard Selection Modal - Choose if Guard is Available */}
-      <GuardSelectionModal
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+      <EmployeeSelectionModal
         isOpen={showGuardSelectionModal}
         onClose={() => setShowGuardSelectionModal(false)}
-        onGuardAvailable={handleGuardAvailable}
-        onNoGuardAvailable={handleNoGuardAvailable}
+        onEmployeeAvailable={handleGuardAvailable}
+        onNoEmployeeAvailable={handleNoGuardAvailable}
       />
-
-      {/* Guard ID Modal - If Guard is Available */}
-      <GuardIdModal
+      <EmployeeIdModal
         isOpen={showGuardModal}
         onClose={() => setShowGuardModal(false)}
         onSubmit={handleSubmitWithGuard}
         isSubmitting={isSubmitting}
       />
-
-      {/* Holding State Modal - If No Guard Available */}
       <HoldingStateModal
         isOpen={showHoldingStateModal}
         onClose={() => setShowHoldingStateModal(false)}
         onConfirm={handleSubmitHoldingState}
         isSubmitting={isSubmitting}
         packageDetails={{
-          customerName: `${batchPackages.length} packages`,
-          trackingNumber: formData.referenceNumber,
-          employeeName: "Multiple Packages",
+          customerName: selectedCustomer?.customerName || `${batchPackages.length} packages`,
+          trackingNumber: formData.referenceNumber || "N/A",
+          employeeName: selectedEmployee?.employeeName || "Multiple Packages",
         }}
       />
 

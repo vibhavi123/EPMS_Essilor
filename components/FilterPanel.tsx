@@ -1,25 +1,21 @@
 import React from "react";
-import { Download } from "lucide-react";
+import { Search } from "lucide-react";
 
 interface FilterPanelProps {
   filterType: string;
   filterMode: string;
   filterCustomer: string;
-  filterEmployee: string;
   filterMonth: string;
   filterYear: string;
   onFilterTypeChange: (value: string) => void;
   onFilterModeChange: (value: string) => void;
   onFilterCustomerChange: (value: string) => void;
-  onFilterEmployeeChange: (value: string) => void;
   onFilterMonthChange: (value: string) => void;
   onFilterYearChange: (value: string) => void;
   onReset: () => void;
   onGenerateReport: () => void;
   uniqueTypes: string[];
   uniqueModes: string[];
-  uniqueCustomers: string[];
-  uniqueEmployees: string[];
   allMonths: { value: string; label: string }[];
   allYears: number[];
 }
@@ -28,21 +24,17 @@ export default function FilterPanel({
   filterType,
   filterMode,
   filterCustomer,
-  filterEmployee,
   filterMonth,
   filterYear,
   onFilterTypeChange,
   onFilterModeChange,
   onFilterCustomerChange,
-  onFilterEmployeeChange,
   onFilterMonthChange,
   onFilterYearChange,
   onReset,
   onGenerateReport,
   uniqueTypes,
   uniqueModes,
-  uniqueCustomers,
-  uniqueEmployees,
   allMonths,
   allYears,
 }: FilterPanelProps) {
@@ -83,31 +75,16 @@ export default function FilterPanel({
         {/* Customer Filter */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Customer</label>
-          <select
-            value={filterCustomer}
-            onChange={(e) => onFilterCustomerChange(e.target.value)}
-            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-          >
-            <option value="">All Customers</option>
-            {uniqueCustomers.map((customer: string) => (
-              <option key={customer} value={customer}>{customer}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Employee Filter */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Employee</label>
-          <select
-            value={filterEmployee}
-            onChange={(e) => onFilterEmployeeChange(e.target.value)}
-            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-          >
-            <option value="">All Employees</option>
-            {uniqueEmployees.map((employee: string) => (
-              <option key={employee} value={employee}>{employee}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <input
+              type="text"
+              value={filterCustomer}
+              onChange={(e) => onFilterCustomerChange(e.target.value)}
+              placeholder="Search customer"
+              className="w-full pl-3 pr-10 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+            />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          </div>
         </div>
 
         {/* Month Filter */}

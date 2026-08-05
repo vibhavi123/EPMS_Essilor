@@ -6,7 +6,7 @@ import AlertModal from "@/components/AlertModal";
 import AccessControlModal from "@/components/AccessControlModal";
 import { useSearchParams } from "next/navigation";
 import { useNavigation } from "@/hooks/useNavigation";
-import { KeyRound } from "lucide-react";
+import { KeyRound, ShieldCheck } from "lucide-react";
 
 type UserFormState = {
   id: number;
@@ -68,16 +68,15 @@ function EditUserContent() {
           return;
         }
         const permissions = data?.data?.permissions ?? {};
-        const canEditUsers = Boolean(permissions.accessManagementEdit);
-        if (!canEditUsers) {
-          nav.goToAllUsers();
-          return;
-        }
+        const canAccessEdit = Boolean(permissions.accessManagementEdit || permissions.accessManagementControl);
         setViewerPermissions({
           accessManagementEdit: Boolean(permissions.accessManagementEdit),
           accessManagementControl: Boolean(permissions.accessManagementControl),
         });
-        setHasPermission(true);
+        setHasPermission(canAccessEdit);
+        if (!canAccessEdit) {
+          nav.goToAllUsers();
+        }
       } catch {
         nav.goToAllUsers();
       } finally {
@@ -264,6 +263,8 @@ function EditUserContent() {
 
   if (!hasPermission) return null;
 
+  const isSuperAdmin = formData.role.toLowerCase() === "superadmin";
+
   return (
     <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
       <Sidebar />
@@ -274,16 +275,18 @@ function EditUserContent() {
             <h1 className="text-3xl md:text-4xl font-bold text-[#0c244c]">Edit User</h1>
             <p className="mt-2 text-sm text-gray-500">Update user information. Only specific fields can be edited.</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsAccessControlOpen(true)}
-            disabled={!viewerPermissions.accessManagementControl}
-            className="flex items-center gap-2 px-4 py-2 bg-[#17a2b8] hover:bg-[#138496] text-white font-bold rounded-lg transition-all"
-            title="Manage user permissions and access control"
-          >
-            <KeyRound className="w-5 h-5" />
-            <span className="whitespace-nowrap">Access Control</span>
-          </button>
+          {!isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => setIsAccessControlOpen(true)}
+              disabled={!viewerPermissions.accessManagementControl}
+              className="flex items-center gap-2 px-4 py-2 bg-[#17a2b8] hover:bg-[#138496] text-white font-bold rounded-lg transition-all"
+              title="Manage user permissions and access control"
+            >
+              <KeyRound className="w-5 h-5" />
+              <span className="whitespace-nowrap">Access Control</span>
+            </button>
+          )}
         </header>
 
         <hr className="border-gray-300 mb-10" />
@@ -294,6 +297,12 @@ function EditUserContent() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+            {isSuperAdmin && (
+              <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-2xl text-purple-900 text-sm font-semibold flex items-center gap-3 shadow-xs">
+                <ShieldCheck className="w-6 h-6 text-purple-600 shrink-0" />
+                <span>Super Admin accounts automatically possess permanent full system control. Access control permissions cannot be modified for Super Admin users.</span>
+              </div>
+            )}
             <section className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
               <h2 className="text-2xl font-semibold text-[#4a5568] mb-8">Account Information</h2>
 

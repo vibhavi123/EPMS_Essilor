@@ -50,7 +50,7 @@ export default function LoginPage() {
     <main className="relative min-h-screen w-full flex items-center justify-center lg:justify-end overflow-hidden bg-[#f0f4f9]">
       <div className="absolute inset-0 z-0 hidden lg:block">
         <Image
-          src="/images/background_image_login.png"
+          src="/images/Background_image_login.png"
           alt="Delivery Scene"
           fill
           sizes="100vw"

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import { useNavigation } from "@/hooks/useNavigation";
 import GuardBarcodePrintCard from "@/components/GuardBarcodePrintCard";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { fetchNextAccessId } from "@/utils/idSequenceClient";
-import { X, Sparkles } from "lucide-react";
+import { X } from "lucide-react";
 
 type GuardRecord = {
   id?: number;
@@ -70,11 +70,6 @@ export default function AddGuardPage() {
   const [selectedGuardFromList, setSelectedGuardFromList] = useState<GuardRecord | null>(null);
   const [currentGuardPage, setCurrentGuardPage] = useState(1);
   const guardsPerPage = 10;
-
-  const [nameSuggestions, setNameSuggestions] = useState<GuardRecord[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -185,63 +180,12 @@ export default function AddGuardPage() {
     }
   };
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(e.target as Node) &&
-        nameInputRef.current &&
-        !nameInputRef.current.contains(e.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleSelectSuggestion = (g: GuardRecord) => {
-    setGuardData({
-      guardName: g.guardName,
-      guardCompany: g.guardCompany || "",
-      department: g.department || "",
-    });
-    setShowSuggestions(false);
-  };
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     field: keyof typeof guardData
   ) => {
-    const val = e.target.value;
-    setGuardData((prev) => ({ ...prev, [field]: val }));
+    setGuardData((prev) => ({ ...prev, [field]: e.target.value }));
     if (error) setError("");
-
-    if (field === "guardName") {
-      if (val.trim().length > 0) {
-        const query = val.trim().toLowerCase();
-        const matches = guards.filter((g) =>
-          g.guardName.toLowerCase().includes(query)
-        );
-        setNameSuggestions(matches.slice(0, 8));
-        setShowSuggestions(matches.length > 0);
-
-        // Auto-fill if exact match
-        const exactMatch = guards.find(
-          (g) => g.guardName.toLowerCase() === query
-        );
-        if (exactMatch) {
-          setGuardData((prev) => ({
-            ...prev,
-            guardCompany: prev.guardCompany || exactMatch.guardCompany || "",
-            department: prev.department || exactMatch.department || "",
-          }));
-        }
-      } else {
-        setNameSuggestions([]);
-        setShowSuggestions(false);
-      }
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -550,45 +494,18 @@ export default function AddGuardPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="relative">
+              <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   Guard Name *
                 </label>
                 <input
-                  ref={nameInputRef}
                   type="text"
                   value={guardData.guardName}
-                  onFocus={() => {
-                    if (nameSuggestions.length > 0) setShowSuggestions(true);
-                  }}
                   onChange={(e) => handleChange(e, "guardName")}
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3ea5d9] focus:border-transparent"
-                  placeholder="Enter or select guard full name"
+                  placeholder="Enter guard full name"
                   required
                 />
-                {showSuggestions && nameSuggestions.length > 0 && (
-                  <div
-                    ref={suggestionsRef}
-                    className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto"
-                  >
-                    {nameSuggestions.map((g) => (
-                      <button
-                        key={g.id ?? g.accessId}
-                        type="button"
-                        onClick={() => handleSelectSuggestion(g)}
-                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex justify-between items-center border-b border-gray-100 last:border-0"
-                      >
-                        <div>
-                          <div className="font-semibold text-gray-900 text-sm">{g.guardName}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {g.department ? `${g.department}` : "No Dept"}
-                            {g.guardCompany ? ` • ${g.guardCompany}` : ""}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <div>

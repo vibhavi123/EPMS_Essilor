@@ -35,18 +35,15 @@ export async function GET(request: NextRequest) {
         `SELECT Id, AccessId, FullName AS guardName, Company AS guardCompany,
                 Department, IsActive, CreatedAt, UpdatedAt
          FROM Users
-         WHERE IsActive = 1 AND FullName IS NOT NULL AND FullName != ''
-           AND (AccessId LIKE ? OR FullName LIKE ? OR Username LIKE ?)
+         WHERE Role = 'guard' AND IsActive = 1 AND (AccessId LIKE ? OR FullName LIKE ?)
          ORDER BY CreatedAt DESC, Id DESC`,
-        [pattern, pattern, pattern]
+        [pattern, pattern]
       );
     } else {
       [rows] = await pool.query<RowDataPacket[]>(
         `SELECT Id, AccessId, FullName AS guardName, Company AS guardCompany,
                 Department, IsActive, CreatedAt, UpdatedAt
-         FROM Users
-         WHERE IsActive = 1 AND FullName IS NOT NULL AND FullName != ''
-         ORDER BY CreatedAt DESC, Id DESC`
+         FROM Users WHERE Role = 'guard' AND IsActive = 1 ORDER BY CreatedAt DESC, Id DESC`
       );
     }
 

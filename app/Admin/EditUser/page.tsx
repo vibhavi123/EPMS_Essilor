@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Sidebar from "@/components/Sidebar";
 import AlertModal from "@/components/AlertModal";
 import AccessControlModal from "@/components/AccessControlModal";
@@ -25,7 +25,7 @@ type ViewerPermissions = {
   accessManagementControl: boolean;
 };
 
-export default function EditUserPage() {
+function EditUserContent() {
   const nav = useNavigation();
   const searchParams = useSearchParams();
   const [hasPermission, setHasPermission] = useState(false);
@@ -473,5 +473,13 @@ export default function EditUserPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function EditUserPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#f8f9fc]">Loading...</div>}>
+      <EditUserContent />
+    </Suspense>
   );
 }

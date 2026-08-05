@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useState, useEffect } from "react";
+import React, { use, useState, useEffect, Suspense } from "react";
 import Sidebar from "@/components/Sidebar";
 import { AlertCircle } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -34,7 +34,7 @@ const errorConfig = {
   },
 };
 
-export default function ErrorPage({ params }: ErrorPageProps) {
+function ErrorPageContent({ params }: ErrorPageProps) {
   const resolvedParams = use(params);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -92,5 +92,13 @@ export default function ErrorPage({ params }: ErrorPageProps) {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ErrorPage(props: ErrorPageProps) {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#f8f9fc]">Loading...</div>}>
+      <ErrorPageContent {...props} />
+    </Suspense>
   );
 }

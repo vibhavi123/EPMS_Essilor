@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import AlertModal from "@/components/AlertModal";
@@ -39,7 +39,7 @@ interface OutgoingPackageData {
 	updatedAt?: string | null;
 }
 
-export default function OutgoingPackageUpdatePage() {
+function OutgoingPackageUpdateContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const trackingNumber = searchParams.get("trackingNumber");
@@ -689,4 +689,12 @@ export default function OutgoingPackageUpdatePage() {
 
 function InputLabel({ label }: { label: string }) {
 	return <label className="block text-xl font-medium text-[#2d3748] mb-3 ml-1">{label}</label>;
+}
+
+export default function OutgoingPackageUpdatePage() {
+	return (
+		<Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#f8f9fc]">Loading...</div>}>
+			<OutgoingPackageUpdateContent />
+		</Suspense>
+	);
 }

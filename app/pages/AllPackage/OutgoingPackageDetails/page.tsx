@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
@@ -62,7 +62,7 @@ interface PackageData {
   guardVerifiedAt: string | null;
 }
 
-export default function OutgoingPackageDetailPage() {
+function OutgoingPackageDetailContent() {
   const searchParams = useSearchParams();
   const trackingNumber = searchParams.get("trackingNumber");
   const { goToOutgoingPackageUpdate } = useNavigation();
@@ -315,6 +315,14 @@ function DetailItem({ label, value, isBadge = false, badgeColor = "green" }: Det
         )}
       </div>
     </div>
+  );
+}
+
+export default function OutgoingPackageDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#f8f9fc]">Loading...</div>}>
+      <OutgoingPackageDetailContent />
+    </Suspense>
   );
 }
 

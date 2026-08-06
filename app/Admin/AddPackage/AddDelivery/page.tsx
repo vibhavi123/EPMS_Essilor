@@ -322,20 +322,41 @@ export default function AddDeliveryCompanyPage() {
                       >
                         Previous
                       </button>
-                      <div className="flex items-center gap-2">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentDeliveryCompanyPage(page)}
-                            className={`px-3 py-2 rounded-lg font-bold transition-all ${
-                              currentDeliveryCompanyPage === page
-                                ? "bg-[#3ea5d9] text-white"
-                                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        ))}
+                      <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                        {(() => {
+                          const getPageNumbers = (current: number, total: number) => {
+                            if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+                            const pages: (number | string)[] = [1];
+                            if (current > 3) pages.push("...");
+                            const start = Math.max(2, current - 1);
+                            const end = Math.min(total - 1, current + 1);
+                            for (let i = start; i <= end; i++) {
+                              if (!pages.includes(i)) pages.push(i);
+                            }
+                            if (current < total - 2) pages.push("...");
+                            if (!pages.includes(total)) pages.push(total);
+                            return pages;
+                          };
+                          return getPageNumbers(currentDeliveryCompanyPage, totalPages).map((page, index) =>
+                            typeof page === "number" ? (
+                              <button
+                                key={`page-${page}`}
+                                onClick={() => setCurrentDeliveryCompanyPage(page)}
+                                className={`px-3 py-2 rounded-lg font-bold transition-all text-sm ${
+                                  currentDeliveryCompanyPage === page
+                                    ? "bg-[#3ea5d9] text-white"
+                                    : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ) : (
+                              <span key={`ellipsis-${index}`} className="px-2 py-1 text-gray-500 font-bold text-sm">
+                                {page}
+                              </span>
+                            )
+                          );
+                        })()}
                       </div>
                       <button
                         onClick={() => setCurrentDeliveryCompanyPage((prev) => Math.min(prev + 1, totalPages))}

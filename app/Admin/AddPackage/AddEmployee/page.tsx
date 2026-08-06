@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "@/components/Sidebar";
 import { useNavigation } from "@/hooks/useNavigation";
 import EmployeeBarcodePrintCard from "@/components/EmployeeBarcodePrintCard";
@@ -27,6 +27,10 @@ export default function AddEmployeePage() {
     employeeCompany: "",
     department: "",
   });
+
+  const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+  const [nameSuggestions, setNameSuggestions] = useState<EmployeeRecord[]>([]);
+  const nameContainerRef = useRef<HTMLDivElement>(null);
 
   const [generatedEmployeeId, setGeneratedEmployeeId] = useState<string | null>(null);
   const [generatedEmployee, setGeneratedEmployee] = useState<{
@@ -181,6 +185,48 @@ export default function AddEmployeePage() {
       setDeletingEmployeeId(null);
       setEmployeeToDelete(null);
     }
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        nameContainerRef.current &&
+        !nameContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowNameSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleNameInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setEmployeeData((prev) => ({ ...prev, employeeName: query }));
+    if (error) setError("");
+
+    if (query.trim().length >= 1) {
+      const q = query.trim().toLowerCase();
+      const filtered = employees.filter((emp) =>
+        emp.employeeName.toLowerCase().includes(q)
+      );
+      setNameSuggestions(filtered.slice(0, 8));
+      setShowNameSuggestions(true);
+    } else {
+      setNameSuggestions([]);
+      setShowNameSuggestions(false);
+    }
+  };
+
+  const selectEmployeeSuggestion = (emp: EmployeeRecord) => {
+    setEmployeeData({
+      employeeName: emp.employeeName,
+      employeeCompany: emp.employeeCompany || "",
+      department: emp.department || "",
+    });
+    setShowNameSuggestions(false);
   };
 
   const handleChange = (
@@ -405,20 +451,41 @@ export default function AddEmployeePage() {
             >
               Previous
             </button>
-            <div className="flex items-center gap-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentEmployeePage(page)}
-                  className={`px-3 py-2 rounded-lg font-bold transition-all ${
-                    currentEmployeePage === page
-                      ? "bg-[#3ea5d9] text-white"
-                      : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+            <div className="flex items-center gap-1.5 flex-wrap justify-center">
+              {(() => {
+                const getPageNumbers = (current: number, total: number) => {
+                  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+                  const pages: (number | string)[] = [1];
+                  if (current > 3) pages.push("...");
+                  const start = Math.max(2, current - 1);
+                  const end = Math.min(total - 1, current + 1);
+                  for (let i = start; i <= end; i++) {
+                    if (!pages.includes(i)) pages.push(i);
+                  }
+                  if (current < total - 2) pages.push("...");
+                  if (!pages.includes(total)) pages.push(total);
+                  return pages;
+                };
+                return getPageNumbers(currentEmployeePage, totalPages).map((page, index) =>
+                  typeof page === "number" ? (
+                    <button
+                      key={`page-${page}`}
+                      onClick={() => setCurrentEmployeePage(page)}
+                      className={`px-3 py-2 rounded-lg font-bold transition-all text-sm ${
+                        currentEmployeePage === page
+                          ? "bg-[#3ea5d9] text-white"
+                          : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ) : (
+                    <span key={`ellipsis-${index}`} className="px-2 py-1 text-gray-500 font-bold text-sm">
+                      {page}
+                    </span>
+                  )
+                );
+              })()}
             </div>
             <button
               onClick={() => setCurrentEmployeePage((prev) => Math.min(prev + 1, totalPages))}
@@ -535,17 +602,51 @@ export default function AddEmployeePage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
+              <div className="relative" ref={nameContainerRef}>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   Employee Name *
                 </label>
                 <input
                   type="text"
                   value={employeeData.employeeName}
-                  onChange={(e) => handleChange(e, "employeeName")}
+                  onChange={handleNameInputChange}
+                  onFocus={() => {
+                    if (employeeData.employeeName.trim().length >= 1) {
+                      const q = employeeData.employeeName.trim().toLowerCase();
+                      const filtered = employees.filter((emp) =>
+                        emp.employeeName.toLowerCase().includes(q)
+                      );
+                      setNameSuggestions(filtered.slice(0, 8));
+                      setShowNameSuggestions(true);
+                    }
+                  }}
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3ea5d9] focus:border-transparent"
-                  placeholder="Enter employee full name"
+                  placeholder="Type employee name to search existing employee records..."
+                  autoComplete="off"
                 />
+
+                {showNameSuggestions && nameSuggestions.length > 0 && (
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                    {nameSuggestions.map((emp) => (
+                      <div
+                        key={emp.id ?? emp.employeeId}
+                        onClick={() => selectEmployeeSuggestion(emp)}
+                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors"
+                      >
+                        <div className="font-bold text-[#0c244c] flex justify-between items-center">
+                          <span>{emp.employeeName}</span>
+                          <span className="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                            {emp.employeeId}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 flex gap-4">
+                          <span>Company: <strong className="text-gray-700">{emp.employeeCompany || "N/A"}</strong></span>
+                          <span>Department: <strong className="text-gray-700">{emp.department || "N/A"}</strong></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>

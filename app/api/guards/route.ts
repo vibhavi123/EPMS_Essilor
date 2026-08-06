@@ -92,14 +92,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Access ID already exists" }, { status: 409 });
     }
 
-    const tempUsername = `guard_${accessId.toLowerCase()}`;
+    let baseUsername = String(body.username ?? "").trim();
+    if (!baseUsername) {
+      baseUsername = guardName.toLowerCase().replace(/[^a-z0-9_]/g, "");
+      if (!baseUsername) baseUsername = "guard";
+    }
+
+    let finalUsername = baseUsername;
+    let counter = 1;
+    while (true) {
+      const [existing] = await pool.query<RowDataPacket[]>(
+        "SELECT Id FROM Users WHERE Username = ? LIMIT 1",
+        [finalUsername]
+      );
+      if (existing.length === 0) break;
+      finalUsername = `${baseUsername}${counter}`;
+      counter++;
+    }
+
     const tempPassword = "Guard@123";
     const passwordHash = await hashPassword(tempPassword);
 
     const [insertResult] = await pool.query<ResultSetHeader>(
       `INSERT INTO Users (AccessId, Username, PasswordHash, FullName, Role, Department, Company, IsActive)
        VALUES (?, ?, ?, ?, 'guard', ?, ?, 1)`,
-      [accessId, tempUsername, passwordHash, guardName, department || null, guardCompany]
+      [accessId, finalUsername, passwordHash, guardName, department || null, guardCompany]
     );
 
     const [createdRows] = await pool.query<RowDataPacket[]>(

@@ -278,7 +278,7 @@ export default function AddCustomerPage() {
                         <th className="px-4 py-3">Customer ID</th>
                         <th className="px-4 py-3">Name</th>
                         <th className="px-4 py-3">Created</th>
-                        <th className="px-4 py-3 text-right">Action</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">

@@ -341,7 +341,7 @@ export default function AddEmployeePage() {
           type="text"
           value={employeeSearchQuery}
           onChange={(e) => setEmployeeSearchQuery(e.target.value)}
-          placeholder="Search by employee ID or name"
+          placeholder="Search by Access ID or name"
           className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3ea5d9]"
         />
         <button
@@ -382,7 +382,7 @@ export default function AddEmployeePage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-3">Employee ID</th>
+                <th className="px-4 py-3">Access ID</th>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Company</th>
                 <th className="px-4 py-3">Department</th>
@@ -501,7 +501,7 @@ export default function AddEmployeePage() {
       {selectedEmployeeFromList && (
         <div className="mt-8 border-t pt-8">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-[#0c244c]">Selected Employee Card</h3>
+            <h3 className="text-lg font-bold text-[#0c244c]">Selected Access ID</h3>
             <button
               onClick={() => setSelectedEmployeeFromList(null)}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
@@ -548,7 +548,7 @@ export default function AddEmployeePage() {
           {/* Header */}
           <header className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
             <h1 className="text-3xl md:text-4xl font-bold text-[#0c244c]">
-              Employee ID Card
+              Acess ID Card
             </h1>
             <div className="bg-white px-6 py-2 rounded-lg shadow-sm border border-gray-100 text-sm font-medium text-gray-500">
               {new Date().toLocaleDateString("en-US")}
@@ -678,7 +678,7 @@ export default function AddEmployeePage() {
               {/* Employee ID Field */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Employee ID *
+                  Access ID*
                 </label>
                 <input
                   type="text"
@@ -689,7 +689,7 @@ export default function AddEmployeePage() {
                 />
                 {generatedEmployeeId && (
                   <p className="text-xs text-green-600 mt-2 font-semibold">
-                    ✓ Employee ID auto-generated
+                    ✓ Access ID auto-generated
                   </p>
                 )}
               </div>

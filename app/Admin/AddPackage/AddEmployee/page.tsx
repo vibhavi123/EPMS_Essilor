@@ -314,7 +314,7 @@ export default function AddEmployeePage() {
     setSuccess("");
   };
 
-  const renderEmployeeList = () => {
+  const  renderEmployeeList = () => {
     // Calculate pagination
     const totalEmployees = employees.length;
     const totalPages = Math.ceil(totalEmployees / employeesPerPage);

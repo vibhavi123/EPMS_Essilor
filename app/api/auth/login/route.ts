@@ -64,12 +64,29 @@ export async function POST(request: NextRequest) {
         [user.Id]
       );
 
-      const [sessionResult] = await pool.query<ResultSetHeader>(
-        `INSERT INTO LoginSessions (UserId, IpAddress, UserAgent, LoginAt, IsActive, RememberMe)
-         VALUES (?, ?, ?, NOW(), 1, ?)`,
-        [user.Id, ipAddress, userAgent, rememberMe ? 1 : 0]
-      );
-      sessionId = sessionResult.insertId;
+      try {
+        const [sessionResult] = await pool.query<ResultSetHeader>(
+          `INSERT INTO LoginSessions (UserId, IpAddress, UserAgent, LoginAt, IsActive, RememberMe)
+           VALUES (?, ?, ?, NOW(), 1, ?)`,
+          [user.Id, ipAddress, userAgent, rememberMe ? 1 : 0]
+        );
+        sessionId = sessionResult.insertId;
+      } catch (err: unknown) {
+        const sqlErr = err as { code?: string; errno?: number };
+        if (sqlErr?.code === "ER_BAD_FIELD_ERROR" || sqlErr?.errno === 1054) {
+          try {
+            await pool.query("ALTER TABLE LoginSessions ADD COLUMN RememberMe TINYINT(1) NOT NULL DEFAULT 0");
+          } catch {}
+          const [sessionResult] = await pool.query<ResultSetHeader>(
+            `INSERT INTO LoginSessions (UserId, IpAddress, UserAgent, LoginAt, IsActive)
+             VALUES (?, ?, ?, NOW(), 1)`,
+            [user.Id, ipAddress, userAgent]
+          );
+          sessionId = sessionResult.insertId;
+        } else {
+          throw err;
+        }
+      }
     } catch (sessionErr) {
       console.warn("Failed to record login session:", sessionErr);
     }

@@ -182,21 +182,33 @@ export default function Sidebar() {
         const count = (data.data as GateRecordRow[]).filter((r) => {
           if (r.exitTime || !r.entryTime) return false;
           
-          // Parse entry time (format: "HH:MM AM/PM")
-          const timeMatch = r.entryTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+          // Parse entry time (format: "HH:MM AM/PM" or 24h "HH:MM")
+          const timeMatch = r.entryTime.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
           if (!timeMatch) return false;
           
           let hours = parseInt(timeMatch[1], 10);
-          const minutes = parseInt(timeMatch[2], 10);
-          const period = timeMatch[3].toUpperCase();
+          const mins = parseInt(timeMatch[2], 10);
+          const period = (timeMatch[4] ?? "").toUpperCase();
           
-          // Convert to 24-hour format
           if (period === 'PM' && hours !== 12) hours += 12;
           if (period === 'AM' && hours === 12) hours = 0;
           
-          // Create a date object for today with entry time
-          const entryDate = new Date();
-          entryDate.setHours(hours, minutes, 0, 0);
+          // Build entry date from the record's stored date field
+          let entryDate: Date;
+          const d = r.date ?? "";
+          if (d && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(d)) {
+            // M/D/YYYY format e.g. "8/9/2026"
+            const [m, dd, y] = d.split("/").map(Number);
+            entryDate = new Date(y, m - 1, dd);
+          } else if (d && /\d{4}-\d{2}-\d{2}/.test(d)) {
+            entryDate = new Date(`${d}T00:00:00`);
+          } else if (d) {
+            entryDate = new Date(d);
+            if (isNaN(entryDate.getTime())) entryDate = new Date();
+          } else {
+            entryDate = new Date();
+          }
+          entryDate.setHours(hours, mins, 0, 0);
           
           const now = Date.now();
           const diffH = (now - entryDate.getTime()) / 3_600_000;

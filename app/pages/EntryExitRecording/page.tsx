@@ -730,7 +730,6 @@ export default function GateControlPage() {
                               <div className="hidden group-hover:block absolute right-0 bottom-full mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 z-50 whitespace-normal">
                                 <p>✓ This employee is overdue</p>
                                 <p>✓ Only Admin/SuperAdmin can confirm return</p>
-                                <p>✓ Look for the alert notification</p>
                               </div>
                             </div>
                           ) : (

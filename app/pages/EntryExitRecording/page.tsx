@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
@@ -10,7 +10,7 @@ import { GateRecordRow, EmployeeData } from "@/utils/formTypes";
 import { searchEmployees } from "@/lib/api/employees";
 import {
   User, Briefcase, Scan, ArrowRightLeft, UserCheck,
-  Truck, RefreshCw, AlertCircle, CheckCircle,
+  Truck, RefreshCw, AlertCircle, CheckCircle, Search, X,
 } from "lucide-react";
 import { PermissionGuard } from "@/hooks/usePermissions";
 
@@ -32,6 +32,10 @@ export default function GateControlPage() {
   const [vehicleType, setVehicleType] = useState("Van");
   const [plateNumber, setPlateNumber] = useState("");
   const [exitReason, setExitReason] = useState("");
+  const [scanQuery, setScanQuery] = useState("");
+  const scanInputRef = useRef<HTMLInputElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const [activeRecords, setActiveRecords] = useState<GateRecordRow[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
@@ -62,26 +66,38 @@ export default function GateControlPage() {
     })();
   }, []);
 
-  // Check if a record is overdue using entry time
+  // Check if a record is overdue using entry time + date
   const isRecordOverdue = (record: GateRecordRow): boolean => {
     if (!overdueHours || !record.entryTime || record.exitTime) return false;
-    
-    // Parse entry time (format: "HH:MM AM/PM")
-    const timeMatch = record.entryTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+
+    // Parse entry time (format: "HH:MM AM/PM" or 24h "HH:MM")
+    const timeMatch = record.entryTime.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
     if (!timeMatch) return false;
-    
-    let hours = parseInt(timeMatch[1], 10);
-    const minutes = parseInt(timeMatch[2], 10);
-    const period = timeMatch[3].toUpperCase();
-    
-    // Convert to 24-hour format
-    if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-    
-    // Create a date object for today with entry time
-    const entryDate = new Date();
-    entryDate.setHours(hours, minutes, 0, 0);
-    
+
+    let hours   = parseInt(timeMatch[1], 10);
+    const mins  = parseInt(timeMatch[2], 10);
+    const period = (timeMatch[4] ?? "").toUpperCase();
+
+    if (period === "PM" && hours !== 12) hours += 12;
+    if (period === "AM" && hours === 12) hours = 0;
+
+    // Build entry date from the record's stored date field
+    let entryDate: Date;
+    const d = record.date ?? "";
+    if (d && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(d)) {
+      // M/D/YYYY format e.g. "8/9/2026"
+      const [m, dd, y] = d.split("/").map(Number);
+      entryDate = new Date(y, m - 1, dd);
+    } else if (d && /\d{4}-\d{2}-\d{2}/.test(d)) {
+      entryDate = new Date(`${d}T00:00:00`);
+    } else if (d) {
+      entryDate = new Date(d);
+      if (isNaN(entryDate.getTime())) entryDate = new Date();
+    } else {
+      entryDate = new Date();
+    }
+    entryDate.setHours(hours, mins, 0, 0);
+
     const now = new Date();
     const diffHours = (now.getTime() - entryDate.getTime()) / (1000 * 60 * 60);
     return diffHours >= overdueHours;
@@ -272,6 +288,32 @@ export default function GateControlPage() {
 
   // Filtered list for active mode 
   const filteredList = activeRecords.filter((r) => r.type === mode);
+  const totalPages = Math.ceil(filteredList.length / PAGE_SIZE);
+  const pagedList = filteredList.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset to page 1 when mode changes
+  useEffect(() => { setCurrentPage(1); }, [mode]);
+
+  function getPageNumbers(current: number, total: number): (number | "...")[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | "...")[] = [1];
+    if (current > 3) pages.push("...");
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push("...");
+    pages.push(total);
+    return pages;
+  }
+
+  // Scan-to-find: match record by personnelId, plateNumber, or name
+  const scanQueryTrimmed = scanQuery.trim().toLowerCase();
+  const scannedRecord: GateRecordRow | null = scanQueryTrimmed
+    ? filteredList.find((r) => {
+        const idMatch = r.personnelId?.toLowerCase() === scanQueryTrimmed;
+        const plateMatch = r.plateNumber?.toLowerCase() === scanQueryTrimmed;
+        const nameMatch = r.name?.toLowerCase().includes(scanQueryTrimmed);
+        return idMatch || plateMatch || nameMatch;
+      }) ?? null
+    : null;
 
   // Build a legacy-compatible record for the modal 
   const modalRecord = verificationRecord
@@ -366,7 +408,7 @@ export default function GateControlPage() {
                   {(["employee", "visitor", "vehicle"] as const).map((m) => (
                     <button
                       key={m}
-                      onClick={() => setMode(m)}
+                      onClick={() => { setMode(m); setScanQuery(""); }}
                       className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-bold text-sm transition-all ${
                         mode === m ? "bg-white text-[#0c244c] shadow-sm" : "text-gray-500"
                       }`}
@@ -549,6 +591,82 @@ export default function GateControlPage() {
                 </span>
               </div>
 
+              {/* Quick Scan / Search Field */}
+              <div className="mb-6 bg-white border-1 border-red-300 rounded-2xl p-4 space-y-3">
+                <p className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1">
+                </p>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    ref={scanInputRef}
+                    type="text"
+                    className="w-full pl-11 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-base uppercase"
+                    value={scanQuery}
+                    onChange={(e) => setScanQuery(e.target.value)}
+                    placeholder={
+                      mode === "employee"
+                        ? "Scan or type Employee ID…"
+                        : mode === "visitor"
+                        ? "Scan or type ID Card / Entry ID…"
+                        : "Type License Plate…"
+                    }
+                    autoComplete="off"
+                  />
+                  {scanQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setScanQuery("")}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Scan Result */}
+                {scanQueryTrimmed && (
+                  scannedRecord ? (
+                    <div className="bg-green-50 border border-green-300 rounded-xl p-4 flex items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-green-900 text-base">{scannedRecord.name ?? scannedRecord.personnelId}</p>
+                        {scannedRecord.type === "vehicle" && scannedRecord.plateNumber && (
+                          <p className="text-xs font-mono text-green-700">{scannedRecord.plateNumber} · {scannedRecord.vehicleType}</p>
+                        )}
+                        {scannedRecord.type === "employee" && scannedRecord.employeeExitReason && (
+                          <p className="text-xs text-green-700">Reason: {scannedRecord.employeeExitReason}</p>
+                        )}
+                        {scannedRecord.type === "visitor" && scannedRecord.visitorReason && (
+                          <p className="text-xs text-green-700">Reason: {scannedRecord.visitorReason}</p>
+                        )}
+                        <p className="text-xs text-green-600">Departed: {scannedRecord.entryTime}</p>
+                      </div>
+                      {mode === "employee" && isRecordOverdue(scannedRecord) ? (
+                        <div className="group relative">
+                          <button
+                            disabled
+                            title="This employee is overdue. Only admin can confirm return via alert."
+                            className="bg-gray-400 text-white px-5 py-2.5 rounded-lg text-sm font-bold cursor-not-allowed opacity-75 whitespace-nowrap"
+                          >
+                            Return Locked
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { handleRecordReturn(scannedRecord); setScanQuery(""); }}
+                          className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow transition-all active:scale-95 whitespace-nowrap"
+                        >
+                          {mode === "employee" ? "✓ Mark Return" : "✓ Mark Exit"}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 font-semibold flex items-center gap-2">
+                      <AlertCircle size={16} /> No active {mode} record found for &ldquo;{scanQuery}&rdquo;
+                    </div>
+                  )
+                )}
+              </div>
+
               {/* Table Headers */}
               <div className="hidden lg:grid grid-cols-12 gap-2 px-8 mb-4 text-[#f87171] font-bold text-xs uppercase tracking-widest">
                 <div className="col-span-6">Name / Reason</div>
@@ -568,7 +686,7 @@ export default function GateControlPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredList.map((record) => (
+                  {pagedList.map((record) => (
                     <div
                       key={record.id}
                       className="bg-white border border-[#6366f1]/30 rounded-2xl shadow-sm hover:border-[#6366f1] transition-all"
@@ -628,6 +746,48 @@ export default function GateControlPage() {
                     </div>
                   ))}
                 </div>
+              )}
+
+              {/* Pagination */}
+              {!isLoadingList && totalPages > 1 && (
+                <div className="flex items-center justify-center gap-1 mt-6 flex-wrap">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ← Prev
+                  </button>
+                  {getPageNumbers(currentPage, totalPages).map((page, idx) =>
+                    page === "..." ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-gray-400 text-xs">…</span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page as number)}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                          currentPage === page
+                            ? "bg-[#0c244c] text-white shadow"
+                            : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+              {!isLoadingList && filteredList.length > 0 && (
+                <p className="text-center text-xs text-gray-400 mt-3">
+                  Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredList.length)} of {filteredList.length} records
+                </p>
               )}
             </section>
           </div>

@@ -22,24 +22,41 @@ export async function GET(request: NextRequest) {
     const [rows] = await pool.query<RowDataPacket[]>(`
       SELECT
         ls.Id, ls.UserId, u.Username, u.FullName, u.Role,
-        ls.IpAddress, ls.UserAgent, ls.LoginAt, ls.LogoutAt, ls.IsActive
+        ls.IpAddress, ls.UserAgent, ls.LoginAt, ls.LogoutAt, ls.IsActive, ls.RememberMe
       FROM LoginSessions ls
       LEFT JOIN Users u ON ls.UserId = u.Id
       ORDER BY ls.LoginAt DESC
     `);
 
-    const data = rows.map((r) => ({
-      id: r.Id,
-      userId: r.UserId,
-      username: r.Username,
-      fullName: r.FullName,
-      role: r.Role,
-      ipAddress: r.IpAddress ?? "Unknown",
-      userAgent: r.UserAgent ?? null,
-      loginAt: r.LoginAt ? new Date(r.LoginAt as string).toISOString() : null,
-      logoutAt: r.LogoutAt ? new Date(r.LogoutAt as string).toISOString() : null,
-      isActive: Boolean(r.IsActive),
-    }));
+    const TTL = 8 * 60 * 60 * 1000;           // 8 hours (normal session)
+    const REMEMBER_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days (remember me)
+
+    const data = rows.map((r) => {
+      const loginAt = new Date(r.LoginAt as string).getTime();
+      const now = Date.now();
+      const sessionDuration = r.RememberMe ? REMEMBER_TTL : TTL;
+      const isExpired = now - loginAt > sessionDuration;
+      
+      const isActive = Boolean(r.IsActive) && !r.LogoutAt && !isExpired;
+      let sessionStatus = "active";
+      if (r.LogoutAt) sessionStatus = "logged_out";
+      else if (isExpired) sessionStatus = "expired";
+      else if (!r.IsActive) sessionStatus = "revoked";
+
+      return {
+        id: r.Id,
+        userId: r.UserId,
+        username: r.Username,
+        fullName: r.FullName,
+        role: r.Role,
+        ipAddress: r.IpAddress ?? "Unknown",
+        userAgent: r.UserAgent ?? null,
+        loginAt: r.LoginAt ? new Date(r.LoginAt as string).toISOString() : null,
+        logoutAt: r.LogoutAt ? new Date(r.LogoutAt as string).toISOString() : null,
+        isActive,
+        sessionStatus
+      };
+    });
 
     return NextResponse.json({ success: true, data });
   } catch (error) {

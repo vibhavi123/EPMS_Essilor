@@ -14,6 +14,7 @@ import {
   Globe,
   Clock,
   Search,
+  Timer,
 } from "lucide-react";
 
 interface LoginSession {
@@ -27,6 +28,8 @@ interface LoginSession {
   loginAt: string | null;
   logoutAt: string | null;
   isActive: boolean;
+  sessionStatus: "active" | "expired" | "logged_out" | "revoked";
+  rememberMe?: boolean;
 }
 
 function formatDateTime(iso: string | null): string {
@@ -290,10 +293,19 @@ export default function LoginMonitorPage() {
                         }`}
                       >
                         <td className="px-6 py-4">
-                          {session.isActive ? (
+                          {session.sessionStatus === "active" ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
                               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block" />
                               Active
+                            </span>
+                          ) : session.sessionStatus === "expired" ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-bold">
+                              Expired
+                            </span>
+                          ) : session.sessionStatus === "revoked" ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-bold">
+                              <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                              Revoked
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-xs font-bold">
@@ -337,10 +349,18 @@ export default function LoginMonitorPage() {
                         <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                           {session.logoutAt ? (
                             formatDateTime(session.logoutAt)
-                          ) : (
+                          ) : session.sessionStatus === "expired" ? (
+                            <span className="text-orange-500 font-bold text-xs bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200 inline-flex items-center gap-1">
+                               Session Expired
+                              {session.rememberMe && <span className="ml-1 text-[10px] text-orange-400">(30d)</span>}
+                            </span>
+                          ) : session.sessionStatus === "active" ? (
                             <span className="text-green-600 font-bold text-xs bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
                               Still Active
+                              {session.rememberMe && <span className="ml-1 text-[10px] text-green-500">(30d)</span>}
                             </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
                           )}
                         </td>
                       </tr>

@@ -185,15 +185,7 @@ export async function getRequestAccessContext(request: NextRequest) {
     return null;
   }
 
-  let permissions = await fetchPermissionsByAccessId(pool, accessId);
-
-  if (!permissions && (user.Role === "admin" || session.role === "admin")) {
-    permissions = { ...FULL_PERMISSIONS };
-  }
-
-  if (!permissions) {
-    permissions = { ...DEFAULT_PERMISSIONS };
-  }
+  const permissions = (await fetchPermissionsByAccessId(pool, accessId)) ?? { ...DEFAULT_PERMISSIONS };
 
   return {
     session,

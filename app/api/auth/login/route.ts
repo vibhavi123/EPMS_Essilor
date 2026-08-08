@@ -55,10 +55,19 @@ export async function POST(request: NextRequest) {
 
     let sessionId: number | undefined;
     try {
+      // Close any existing active sessions for this user before creating a new one.
+      // This ensures the monitor correctly shows only the current session as active
+      // when the user logs in again (from any IP/device).
+      await pool.query(
+        `UPDATE LoginSessions SET IsActive = 0, LogoutAt = NOW()
+         WHERE UserId = ? AND IsActive = 1`,
+        [user.Id]
+      );
+
       const [sessionResult] = await pool.query<ResultSetHeader>(
-        `INSERT INTO LoginSessions (UserId, IpAddress, UserAgent, LoginAt, IsActive)
-         VALUES (?, ?, ?, NOW(), 1)`,
-        [user.Id, ipAddress, userAgent]
+        `INSERT INTO LoginSessions (UserId, IpAddress, UserAgent, LoginAt, IsActive, RememberMe)
+         VALUES (?, ?, ?, NOW(), 1, ?)`,
+        [user.Id, ipAddress, userAgent, rememberMe ? 1 : 0]
       );
       sessionId = sessionResult.insertId;
     } catch (sessionErr) {

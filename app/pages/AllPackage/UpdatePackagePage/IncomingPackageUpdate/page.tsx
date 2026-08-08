@@ -6,7 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import AlertModal from "@/components/AlertModal";
 import CustomerSelector from "@/components/CustomerSelector";
 import DeliveryCompanySelector from "@/components/DeliveryCompanySelector";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { normalizePlate, validateSriLankanPlate } from "@/utils/plateValidator";
 import { Customer, DeliveryCompany } from "@/utils/formTypes";
 
@@ -34,6 +34,13 @@ interface PackageData {
   handOverGuardId?: string | null;
   guardVerificationStatus?: string;
   guardVerifiedAt?: string | null;
+}
+
+function generateTrackingNumber(): string {
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `TRK-${datePart}-${randomPart}`;
 }
 
 function IncomingPackageUpdateContent() {
@@ -415,13 +422,26 @@ function IncomingPackageUpdateContent() {
                 {form.mode?.toString().toLowerCase() !== "batch" && (
                   <div className="md:col-span-6 lg:col-span-4">
                     <InputLabel label="Tracking Number" />
-                    <input
-                      type="text"
-                      value={form.trackingNumber??""}
-                      onChange={(e) => handleChange("trackingNumber", e.target.value)}
-                      disabled={isFieldDisabled("trackingNumber")}
-                      className="form-input-essilor"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={form.trackingNumber ?? ""}
+                        onChange={(e) => handleChange("trackingNumber", e.target.value)}
+                        disabled={isFieldDisabled("trackingNumber")}
+                        className="form-input-essilor"
+                        placeholder="Enter or generate tracking number"
+                      />
+                      {!isFieldDisabled("trackingNumber") && (
+                        <button
+                          type="button"
+                          title="Generate Tracking Number"
+                          onClick={() => handleChange("trackingNumber", generateTrackingNumber())}
+                          className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-[#0c244c] hover:bg-[#1a3a6e] text-white transition-colors duration-200 shadow-md"
+                        >
+                          <RefreshCw size={18} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
                 {form.mode?.toString().toLowerCase() === "batch" && (
@@ -585,28 +605,39 @@ function IncomingPackageUpdateContent() {
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    <div className="md:col-span-10">
+                    <div className="md:col-span-9">
                       <InputLabel label="Add Tracking Number" />
-                      <input
-                        type="text"
-                        placeholder="Enter a new tracking number"
-                        value={batchTrackingNumberInput}
-                        onChange={(e) => setBatchTrackingNumberInput(e.target.value.toUpperCase())}
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const candidate = batchTrackingNumberInput.trim().toUpperCase();
-                            if (candidate && !batchTrackingNumbers.includes(candidate) && canAddBatch() && verificationMode !== "completed") {
-                              updateBatchTrackingNumbers([...batchTrackingNumbers, candidate]);
-                              setBatchTrackingNumberInput("");
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter or generate a tracking number"
+                          value={batchTrackingNumberInput}
+                          onChange={(e) => setBatchTrackingNumberInput(e.target.value.toUpperCase())}
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const candidate = batchTrackingNumberInput.trim().toUpperCase();
+                              if (candidate && !batchTrackingNumbers.includes(candidate) && canAddBatch() && verificationMode !== "completed") {
+                                updateBatchTrackingNumbers([...batchTrackingNumbers, candidate]);
+                                setBatchTrackingNumberInput("");
+                              }
                             }
-                          }
-                        }}
-                        className="form-input-essilor"
-                        disabled={isSaving || verificationMode === "completed"}
-                      />
+                          }}
+                          className="form-input-essilor"
+                          disabled={isSaving || verificationMode === "completed"}
+                        />
+                        <button
+                          type="button"
+                          title="Generate Tracking Number"
+                          onClick={() => setBatchTrackingNumberInput(generateTrackingNumber())}
+                          disabled={isSaving || verificationMode === "completed"}
+                          className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-[#0c244c] hover:bg-[#1a3a6e] text-white transition-colors duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <RefreshCw size={18} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="md:col-span-2 flex items-end">
+                    <div className="md:col-span-3 flex items-end">
                       <button
                         type="button"
                         onClick={() => {

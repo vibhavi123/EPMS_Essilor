@@ -35,6 +35,18 @@ export default function AllEntryExitRecordsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "employee" | "visitor" | "vehicle">("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 15;
+
+  function getPageNumbers(current: number, total: number): (number | "...")[] {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | "...")[] = [1];
+    if (current > 3) pages.push("...");
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+    if (current < total - 2) pages.push("...");
+    pages.push(total);
+    return pages;
+  }
 
   //Fetch all records from DB 
   const fetchRecords = useCallback(async () => {
@@ -64,6 +76,7 @@ export default function AllEntryExitRecordsPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchRecords();
+      setCurrentPage(1); // reset to page 1 on new search/filter
     }, 400);
     return () => clearTimeout(timer);
   }, [fetchRecords]);
@@ -76,6 +89,9 @@ export default function AllEntryExitRecordsPage() {
     vehicles:    records.filter((r) => r.type === "vehicle").length,
     onPremise:   records.filter((r) => !r.exitTime).length,
   }), [records]);
+
+  const totalPages = Math.ceil(records.length / PAGE_SIZE);
+  const pagedRecords = records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <PermissionGuard permission="entryExitRecording">
@@ -262,7 +278,7 @@ export default function AllEntryExitRecordsPage() {
 
         {/* Table Headers */}
         {!isLoading && !error && records.length > 0 && (
-          <div className="hidden lg:grid grid-cols-12 gap-2 px-8 mb-4 text-[#f87171] font-bold text-sm uppercase tracking-wider">
+          <div className="hidden lg:grid grid-cols-12 gap-2 px-8 mb-4 text-[#f87171] font-bold text-base uppercase tracking-wider">
             <div className="col-span-2">ID / Plate</div>
             <div className="col-span-3">Name / Reason</div>
             <div className="col-span-2 text-center">Type</div>
@@ -283,21 +299,21 @@ export default function AllEntryExitRecordsPage() {
               No records found matching your criteria
             </div>
           ) : (
-            records.map((record) => (
+            pagedRecords.map((record) => (
               <div
                 key={record.id}
                 className="bg-white border border-[#6366f1]/30 rounded-2xl shadow-sm hover:border-[#6366f1] transition-all group"
               >
                 {/* Desktop Row */}
-                <div className="hidden lg:grid grid-cols-12 gap-2 items-center px-8 py-5 text-[#2d3748] font-semibold text-sm">
+                <div className="hidden lg:grid grid-cols-12 gap-2 items-center px-8 py-5 text-[#2d3748] font-semibold text-base">
                   {record.type !== "employee" ? (
-                    <div className="col-span-2 font-mono text-xs text-gray-500">
+                    <div className="col-span-2 font-mono text-sm text-gray-500">
                       {record.personnelId}
                     </div>
                   ) : null}
 
                   <div className={record.type === "employee" ? "col-span-5" : "col-span-3"}>
-                      <p className="font-bold">
+                      <p className="font-bold text-[#0c244c]">
                         {record.type === "vehicle"
                           ? record.driverName ?? record.name ?? "N/A"
                           : record.name ?? record.personnelId}
@@ -306,31 +322,31 @@ export default function AllEntryExitRecordsPage() {
                     {record.type === "employee" && (
                       <>
                         {(record.employeeCompany || record.employeeDepartment) && (
-                          <p className="text-[10px] text-gray-400">{record.employeeCompany} / {record.employeeDepartment}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{record.employeeCompany} / {record.employeeDepartment}</p>
                         )}
                         {record.employeeExitReason && (
-                          <p className="text-[11px] text-gray-500 mt-1">Reason: {record.employeeExitReason}</p>
+                          <p className="text-sm text-gray-500 mt-1">Reason: {record.employeeExitReason}</p>
                         )}
                       </>
                     )}
                     {record.type === "visitor" && (
                       <>
                         {record.visitorReason && (
-                          <p className="text-[11px] text-gray-500 mt-1">Reason: {record.visitorReason}</p>
+                          <p className="text-sm text-gray-500 mt-1">Reason: {record.visitorReason}</p>
                         )}
                         {!record.visitorReason && (
-                          <p className="text-[11px] text-gray-400 italic">No reason provided</p>
+                          <p className="text-sm text-gray-400 italic mt-1">No reason provided</p>
                         )}
                       </>
                     )}
                     {record.type === "vehicle" && (
                       <>
-                        <p className="text-[10px] text-gray-400">
+                        <p className="text-xs text-gray-400 mt-0.5">
                           {record.vehicleType && <span>{record.vehicleType}</span>}
                           {record.plateNumber && <span> • {record.plateNumber}</span>}
                         </p>
                         {record.vehicleArrivalReason && (
-                          <p className="text-[11px] text-gray-500 mt-1">Reason: {record.vehicleArrivalReason}</p>
+                          <p className="text-sm text-gray-500 mt-1">Reason: {record.vehicleArrivalReason}</p>
                         )}
                       </>
                     )}
@@ -338,7 +354,7 @@ export default function AllEntryExitRecordsPage() {
 
                   <div className="col-span-2 flex justify-center">
                     <span
-                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                      className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider ${
                         record.type === "employee"
                           ? "bg-[#e2f9ec] text-[#34d399]"
                           : record.type === "visitor"
@@ -352,12 +368,12 @@ export default function AllEntryExitRecordsPage() {
 
                   <div className="col-span-1 flex justify-center">
                     {record.exitTime && !record.guardVerifiedAt ? (
-                      <span className="px-3 py-1 rounded-md text-[10px] font-bold bg-blue-100 text-blue-700" title="Confirmed by Admin">
+                      <span className="px-3 py-1 rounded-md text-xs font-bold bg-blue-100 text-blue-700" title="Confirmed by Admin">
                         ✓ Admin
                       </span>
                     ) : (
                       <span
-                        className={`px-3 py-1 rounded-md text-[10px] font-bold ${
+                        className={`px-3 py-1 rounded-md text-xs font-bold ${
                           record.exitTime
                             ? "bg-green-100 text-green-700"
                             : "bg-orange-100 text-orange-600"
@@ -374,7 +390,7 @@ export default function AllEntryExitRecordsPage() {
                     )}
                   </div>
 
-                  <div className="col-span-4 text-center text-xs">
+                  <div className="col-span-4 text-center text-sm">
                     <span className="text-gray-400 mr-2">{record.date}</span>
                     <span className="font-bold">{record.entryTime}</span>
                     <span className="mx-2 text-gray-300">→</span>
@@ -388,7 +404,7 @@ export default function AllEntryExitRecordsPage() {
                       {record.exitTime ?? "—"}
                     </span>
                     {record.guardId && record.guardVerifiedAt && (
-                      <span className="ml-3 text-[10px] text-gray-400 font-mono">
+                      <span className="ml-3 text-xs text-gray-400 font-mono">
                         Guard: {record.guardId}
                       </span>
                     )}
@@ -397,16 +413,16 @@ export default function AllEntryExitRecordsPage() {
 
                 {/* Mobile Card */}
                 <div className="lg:hidden p-5 space-y-3">
-                  <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+                  <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                     {record.type !== "employee" ? (
-                      <span className="font-black text-[#0c244c] tracking-tighter font-mono">
+                      <span className="font-black text-[#0c244c] tracking-tighter font-mono text-sm">
                         {record.personnelId}
                       </span>
                     ) : (
                       <span />
                     )}
                     <span
-                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${
+                      className={`px-3 py-1 rounded-lg text-xs font-black uppercase ${
                         record.type === "employee"
                           ? "bg-[#e2f9ec] text-[#34d399]"
                           : record.type === "visitor"
@@ -417,7 +433,7 @@ export default function AllEntryExitRecordsPage() {
                       {record.type}
                     </span>
                   </div>
-                  <div className="text-sm font-bold">
+                  <div className="text-base font-bold text-[#0c244c]">
                     {record.type === "vehicle"
                       ? record.driverName ?? record.name ?? "N/A"
                       : record.name ?? record.personnelId}
@@ -429,17 +445,17 @@ export default function AllEntryExitRecordsPage() {
                         <div className="text-xs text-gray-400">{record.employeeCompany} / {record.employeeDepartment}</div>
                       )}
                       {record.employeeExitReason && (
-                        <div className="text-xs text-gray-500">Reason: {record.employeeExitReason}</div>
+                        <div className="text-sm text-gray-500">Reason: {record.employeeExitReason}</div>
                       )}
                     </>
                   )}
                   {record.type === "visitor" && (
                     <>
                       {record.visitorReason && (
-                        <div className="text-xs text-gray-500">Reason: {record.visitorReason}</div>
+                        <div className="text-sm text-gray-500">Reason: {record.visitorReason}</div>
                       )}
                       {!record.visitorReason && (
-                        <div className="text-xs text-gray-400 italic">No reason provided</div>
+                        <div className="text-sm text-gray-400 italic">No reason provided</div>
                       )}
                     </>
                   )}
@@ -450,11 +466,11 @@ export default function AllEntryExitRecordsPage() {
                         {record.plateNumber && <span> • {record.plateNumber}</span>}
                       </div>
                       {record.vehicleArrivalReason && (
-                        <div className="text-xs text-gray-500">Reason: {record.vehicleArrivalReason}</div>
+                        <div className="text-sm text-gray-500">Reason: {record.vehicleArrivalReason}</div>
                       )}
                     </>
                   )}
-                  <div className="flex justify-between text-xs font-medium text-gray-500">
+                  <div className="flex justify-between text-sm font-medium text-gray-500">
                     <span>
                       {record.date} &nbsp;|&nbsp; {record.entryTime} → {record.exitTime ?? "—"}
                     </span>
@@ -467,12 +483,12 @@ export default function AllEntryExitRecordsPage() {
                     </span>
                   </div>
                   {record.guardId && record.guardVerifiedAt && (
-                    <div className="text-[10px] text-gray-400 font-mono">
+                    <div className="text-xs text-gray-400 font-mono">
                       Guard: {record.guardId}
                     </div>
                   )}
                   {record.exitTime && !record.guardVerifiedAt && (
-                    <div className="text-[10px] font-bold text-blue-700 bg-blue-50 rounded px-2 py-1 w-fit" title="Confirmed by Admin">
+                    <div className="text-xs font-bold text-blue-700 bg-blue-50 rounded px-2 py-1 w-fit" title="Confirmed by Admin">
                       ✓ Admin Confirmed
                     </div>
                   )}
@@ -482,10 +498,47 @@ export default function AllEntryExitRecordsPage() {
           )}
         </div>
 
+        {/* Pagination */}
+        {!isLoading && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1 mt-8 flex-wrap">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ← Prev
+            </button>
+            {getPageNumbers(currentPage, totalPages).map((page, idx) =>
+              page === "..." ? (
+                <span key={`ellipsis-${idx}`} className="px-2 text-gray-400 text-xs">…</span>
+              ) : (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page as number)}
+                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                    currentPage === page
+                      ? "bg-[#0c244c] text-white shadow"
+                      : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {page}
+                </button>
+              )
+            )}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next →
+            </button>
+          </div>
+        )}
+
         {/* Footer count */}
         {!isLoading && records.length > 0 && (
-          <p className="text-center text-xs text-gray-400 font-semibold mt-8">
-            Showing {records.length} record{records.length !== 1 ? "s" : ""}
+          <p className="text-center text-xs text-gray-400 font-semibold mt-4">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, records.length)} of {records.length} record{records.length !== 1 ? "s" : ""}
           </p>
         )}
         </main>

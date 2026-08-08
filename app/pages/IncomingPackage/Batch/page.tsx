@@ -18,7 +18,7 @@ import {
   buildVerifiedPackagePayload,
   buildHoldingPackagePayload,
 } from "@/utils/apiClient";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { normalizePlate, validateSriLankanPlate } from "@/utils/plateValidator";
 import { Customer, DeliveryCompany } from "@/utils/formTypes";
 import styles from "../styles.module.css";
@@ -36,6 +36,14 @@ interface BatchPackage {
 const vehicleTypes = ["Van", "Motorcycle", "Car", "Pickup", "Truck", "Three-Wheeler", "Other"];
 
 
+
+
+function generateTrackingNumber(): string {
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `TRK-${datePart}-${randomPart}`;
+}
 
 export default function BatchIncomingPackagePage() {
   const nav = useNavigation();
@@ -429,14 +437,26 @@ export default function BatchIncomingPackagePage() {
 
               <div className="md:col-span-6">
                 <InputLabel label="Tracking Number *" />
-                <input
-                  type="text"
-                  className={styles["form-input-custom"]}
-                  value={formData.trackingNumber}
-                  onChange={(e) => handleInputChange(e, "trackingNumber")}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddToBatch()}
-                  placeholder="Enter tracking number"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className={styles["form-input-custom"]}
+                    value={formData.trackingNumber}
+                    onChange={(e) => handleInputChange(e, "trackingNumber")}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddToBatch()}
+                    placeholder="Enter or generate tracking number"
+                  />
+                  <button
+                    type="button"
+                    title="Generate Tracking Number"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, trackingNumber: generateTrackingNumber() }))
+                    }
+                    className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-[#0c244c] hover:bg-[#1a3a6e] text-white transition-colors duration-200 shadow-md"
+                  >
+                    <RefreshCw size={18} />
+                  </button>
+                </div>
               </div>
 
               <div className="md:col-span-6">

@@ -1,6 +1,4 @@
--- =============================================================================
--- GuardSystemDB - MySQL Schema
--- Converted from Microsoft SQL Server (MSSQL) to MySQL 8.0+
+
 -- =============================================================================
 
 -- 1. CREATE & USE DATABASE
@@ -217,9 +215,9 @@ CREATE TABLE IF NOT EXISTS IdCounters (
     UpdatedAt    DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 );
 
--- =============================================================================
+-- ==================================================
 -- 7. EMPLOYEES-ok
--- =============================================================================
+-- ==================================================
 CREATE TABLE IF NOT EXISTS Employees (
     Id              INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
     EmployeeId      VARCHAR(50)   NOT NULL,
@@ -306,6 +304,7 @@ CREATE TABLE IF NOT EXISTS LoginSessions (
     LoginAt   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     LogoutAt  DATETIME      NULL,
     IsActive  TINYINT(1)    NOT NULL DEFAULT 1,
+    RememberMe TINYINT(1)   NOT NULL DEFAULT 0,
 
     CONSTRAINT FK_LoginSessions_Users
         FOREIGN KEY (UserId) REFERENCES Users (Id)

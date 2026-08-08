@@ -15,31 +15,42 @@ interface OverdueEmployee {
   totalMinutes: number;
 }
 
-/** Returns elapsed hours/minutes since entry time (handles timezone issues better) */
+/** Returns elapsed hours/minutes since entry using the record's actual date + time */
 function getElapsed(entryTime: string, date: string) {
   const now = new Date();
-  
-  // Parse entry time string (format: "HH:MM AM/PM")
-  const timeMatch = entryTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+
+  // Parse entry time string (format: "HH:MM AM/PM" or "HH:MM")
+  const timeMatch = entryTime.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
   if (!timeMatch) {
-    // Fallback: if time format is unexpected, return 0
     return { hoursElapsed: 0, minutesElapsed: 0, totalMinutes: 0 };
   }
-  
-  let hours = parseInt(timeMatch[1], 10);
-  const minutes = parseInt(timeMatch[2], 10);
-  const period = timeMatch[3].toUpperCase();
-  
-  // Convert to 24-hour format
-  if (period === 'PM' && hours !== 12) hours += 12;
-  if (period === 'AM' && hours === 12) hours = 0;
-  
-  // Create a date object for today with entry time
-  const entryDate = new Date();
-  entryDate.setHours(hours, minutes, 0, 0);
-  
-  const diffMs = now.getTime() - entryDate.getTime();
-  const totalMinutes = Math.floor(diffMs / 60_000);
+
+  let hours   = parseInt(timeMatch[1], 10);
+  const mins  = parseInt(timeMatch[2], 10);
+  const period = (timeMatch[4] ?? "").toUpperCase();
+
+  if (period === "PM" && hours !== 12) hours += 12;
+  if (period === "AM" && hours === 12) hours = 0;
+
+  // Use the record's stored date (format: "M/D/YYYY", "YYYY-MM-DD", or similar)
+  let entryDate: Date;
+  if (date && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
+    // M/D/YYYY format e.g. "8/9/2026"
+    const [m, d, y] = date.split("/").map(Number);
+    entryDate = new Date(y, m - 1, d);
+  } else if (date && /\d{4}-\d{2}-\d{2}/.test(date)) {
+    // ISO format: "2025-08-08"
+    entryDate = new Date(`${date}T00:00:00`);
+  } else if (date) {
+    entryDate = new Date(date);
+    if (isNaN(entryDate.getTime())) entryDate = new Date();
+  } else {
+    entryDate = new Date();
+  }
+  entryDate.setHours(hours, mins, 0, 0);
+
+  const diffMs      = now.getTime() - entryDate.getTime();
+  const totalMinutes = Math.max(0, Math.floor(diffMs / 60_000));
   const hoursElapsed = Math.floor(totalMinutes / 60);
   const minutesElapsed = totalMinutes % 60;
   return { hoursElapsed, minutesElapsed, totalMinutes };
@@ -87,11 +98,14 @@ export default function OverdueEmployeeAlert() {
     }
   }, [snoozedUntil, overdueHours]);
 
-  // Fetch configured overdue hours from admin settings
+  // Fetch configured overdue hours + check if this user can see the alert
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
+        // overdueEmployeeAlert permission controls visibility for all roles.
+        // SuperAdmin always gets it (FULL_PERMISSIONS on server).
+        // Admins are controlled by the Access Control panel toggle.
         const permissionRes = await fetch("/api/permissions/me");
         const permissionData = await permissionRes.json();
         if (mounted && permissionRes.ok && permissionData?.success) {
@@ -110,9 +124,7 @@ export default function OverdueEmployeeAlert() {
         // ignore; alert stays disabled until config exists
       }
     })();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   // Initial check + interval

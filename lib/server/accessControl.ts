@@ -27,7 +27,8 @@ export type PermissionKey =
   | "addPackageCustomer"
   | "addPackageDelivery"
   | "employeeVerifiedIdView"
-  | "guardVerifiedIdView";
+  | "guardVerifiedIdView"
+  | "loginMonitor";
 
 export type PermissionsMap = Record<PermissionKey, boolean>;
 
@@ -56,6 +57,7 @@ export const DEFAULT_PERMISSIONS: PermissionsMap = {
   addPackageDelivery: false,
   employeeVerifiedIdView: false,
   guardVerifiedIdView: false,
+  loginMonitor: false,
 };
 
 export const FULL_PERMISSIONS: PermissionsMap = {
@@ -83,6 +85,7 @@ export const FULL_PERMISSIONS: PermissionsMap = {
   addPackageDelivery: true,
   employeeVerifiedIdView: true,
   guardVerifiedIdView: true,
+  loginMonitor: true,
 };
 
 const PERMISSION_COLUMNS = `
@@ -124,6 +127,7 @@ export function mapPermissionRecord(row?: Record<string, unknown>): PermissionsM
     addPackageDelivery: Boolean(row.AddPackageDelivery),
     employeeVerifiedIdView: Boolean(row.EmployeeVerifiedIdView),
     guardVerifiedIdView: Boolean(row.GuardVerifiedIdView),
+    loginMonitor: Boolean(row.LoginMonitoring ?? row.LoginMonitor),
   };
 }
 

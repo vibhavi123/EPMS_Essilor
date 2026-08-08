@@ -14,7 +14,13 @@ export async function GET(request: NextRequest) {
     }
 
     const role = String(accessContext.session.role || "");
-    if (role !== "admin" && role !== "superAdmin") {
+    const canView =
+      role === "superAdmin" ||
+      role === "admin" ||
+      Boolean(accessContext.permissions?.loginMonitor) ||
+      Boolean(accessContext.permissions?.accessManagementControl);
+
+    if (!canView) {
       return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
     }
 
@@ -32,10 +38,10 @@ export async function GET(request: NextRequest) {
     const REMEMBER_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days (remember me)
 
     const data = rows.map((r) => {
-      const loginAt = new Date(r.LoginAt as string).getTime();
+      const loginAtTime = r.LoginAt ? new Date(r.LoginAt as string).getTime() : 0;
       const now = Date.now();
       const sessionDuration = r.RememberMe ? REMEMBER_TTL : TTL;
-      const isExpired = now - loginAt > sessionDuration;
+      const isExpired = loginAtTime ? now - loginAtTime > sessionDuration : false;
       
       const isActive = Boolean(r.IsActive) && !r.LogoutAt && !isExpired;
       let sessionStatus = "active";
@@ -46,11 +52,11 @@ export async function GET(request: NextRequest) {
       return {
         id: r.Id,
         userId: r.UserId,
-        username: r.Username,
-        fullName: r.FullName,
-        role: r.Role,
-        ipAddress: r.IpAddress ?? "Unknown",
-        userAgent: r.UserAgent ?? null,
+        username: String(r.Username || "Unknown"),
+        fullName: String(r.FullName || r.Username || "Unknown"),
+        role: String(r.Role || "User"),
+        ipAddress: r.IpAddress ? String(r.IpAddress) : "Unknown",
+        userAgent: r.UserAgent ? String(r.UserAgent) : null,
         loginAt: r.LoginAt ? new Date(r.LoginAt as string).toISOString() : null,
         logoutAt: r.LogoutAt ? new Date(r.LogoutAt as string).toISOString() : null,
         isActive,

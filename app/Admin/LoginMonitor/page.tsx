@@ -125,12 +125,13 @@ export default function LoginMonitorPage() {
   }, [fetchSessions]);
 
   const filteredSessions = sessions.filter((s) => {
+    const q = search.trim().toLowerCase();
     const matchesSearch =
-      !search ||
-      s.username.toLowerCase().includes(search.toLowerCase()) ||
-      s.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      s.ipAddress.toLowerCase().includes(search.toLowerCase()) ||
-      s.role.toLowerCase().includes(search.toLowerCase());
+      !q ||
+      (s.username ?? "").toLowerCase().includes(q) ||
+      (s.fullName ?? "").toLowerCase().includes(q) ||
+      (s.ipAddress ?? "").toLowerCase().includes(q) ||
+      (s.role ?? "").toLowerCase().includes(q);
     const matchesFilter =
       filterActive === "all" ||
       (filterActive === "active" && s.isActive) ||

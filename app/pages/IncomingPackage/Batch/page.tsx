@@ -378,7 +378,30 @@ export default function BatchIncomingPackagePage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
     field: string
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value, }));
+    const val = e.target.value;
+    if (field === "vehicleType") {
+      if (val.toLowerCase() === "pickup" || val.toLowerCase() === "pick up") {
+        setFormData((prev) => ({
+          ...prev,
+          vehicleType: val,
+          vehicleNumber: "Pickup",
+          deliveryCompany: "Pickup",
+        }));
+        setSelectedDeliveryCompany({ id: 0, deliveryCompany: "Pickup" });
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          vehicleType: val,
+          ...(prev.vehicleNumber.toLowerCase() === "pickup" ? { vehicleNumber: "" } : {}),
+          ...(prev.deliveryCompany.toLowerCase() === "pickup" ? { deliveryCompany: "" } : {}),
+        }));
+        if (selectedDeliveryCompany?.deliveryCompany?.toLowerCase() === "pickup") {
+          setSelectedDeliveryCompany(null);
+        }
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: val }));
+    }
   };
 
   return (

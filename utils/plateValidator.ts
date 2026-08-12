@@ -10,6 +10,7 @@ export function normalizePlate(input: string | null | undefined): string {
 
 export function validateSriLankanPlate(input: string | null | undefined): string {
   const plate = normalizePlate(input);
+  if (plate === "PICKUP") return "Valid Sri Lankan vehicle number";
   if (SRI_LANKA_PLATE_REGEX.test(plate)) return "Valid Sri Lankan vehicle number";
   return "Invalid vehicle number";
 }

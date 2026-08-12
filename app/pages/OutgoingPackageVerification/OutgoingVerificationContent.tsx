@@ -209,7 +209,7 @@ export default function OutgoingVerificationContent() {
       const vehicle = normalizePlate(formData.vehicleNumber);
       // extra validation server-side will apply, but block obvious invalids
       if (!validateSriLankanPlate(vehicle).startsWith("Valid")) {
-        setAlertModal({ isOpen: true, title: "Invalid Vehicle", message: "Vehicle number format is invalid", type: "error" });
+        setAlertModal({ isOpen: true, title: "Invalid Vehicle", message: "Vehicle number is invalid", type: "error" });
         setIsSubmitting(false);
         return;
       }
@@ -276,7 +276,7 @@ export default function OutgoingVerificationContent() {
     try {
       const vehicle = normalizePlate(formData.vehicleNumber);
       if (!validateSriLankanPlate(vehicle).startsWith("Valid")) {
-        setAlertModal({ isOpen: true, title: "Invalid Vehicle", message: "Vehicle number format is invalid", type: "error" });
+        setAlertModal({ isOpen: true, title: "Invalid Vehicle", message: "Vehicle number is invalid", type: "error" });
         setIsSubmitting(false);
         return;
       }
@@ -330,7 +330,30 @@ export default function OutgoingVerificationContent() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     field: string
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    const val = e.target.value;
+    if (field === "vehicleType") {
+      if (val.toLowerCase() === "pickup" || val.toLowerCase() === "pick up") {
+        setFormData((prev) => ({
+          ...prev,
+          vehicleType: val,
+          vehicleNumber: "Pickup",
+          deliveryCompany: "Pickup",
+        }));
+        setSelectedDeliveryCompany({ id: 0, deliveryCompany: "Pickup" });
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          vehicleType: val,
+          ...(prev.vehicleNumber.toLowerCase() === "pickup" ? { vehicleNumber: "" } : {}),
+          ...(prev.deliveryCompany.toLowerCase() === "pickup" ? { deliveryCompany: "" } : {}),
+        }));
+        if (selectedDeliveryCompany?.deliveryCompany?.toLowerCase() === "pickup") {
+          setSelectedDeliveryCompany(null);
+        }
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: val }));
+    }
   };
 
   // Normalize and validate vehicle on Enter / blur

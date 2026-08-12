@@ -118,11 +118,7 @@ export default function RecordVerificationModal({
           
           {/* Verification Details */}
           <div className="bg-gray-50 rounded-xl p-4 space-y-4 border border-gray-200">
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">ID</p>
-              <p className="text-lg font-mono font-bold text-[#0c244c]">{record.id}</p>
-            </div>
-            
+
             <div className="space-y-1">
               <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Name</p>
               <p className="text-lg font-bold text-[#0c244c]">{record.name}</p>

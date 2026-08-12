@@ -390,7 +390,7 @@ export default function VerifyHoldingPackagesPage() {
                           {!pkg.verified ? (
                             <button
                               onClick={() => handleVerifyClick(pkg)}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-[#0c244c] text-white rounded-lg hover:bg-[#0c2d5c] transition-colors font-medium"
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-[#0084c8] text-white rounded-lg hover:bg-[#0c2d5c] transition-colors font-medium"
                             >
                               Verify
                             </button>

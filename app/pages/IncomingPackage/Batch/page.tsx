@@ -452,7 +452,7 @@ export default function BatchIncomingPackagePage() {
                     onClick={() =>
                       setFormData((prev) => ({ ...prev, trackingNumber: generateTrackingNumber() }))
                     }
-                    className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-[#0c244c] hover:bg-[#1a3a6e] text-white transition-colors duration-200 shadow-md"
+                    className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-[#0084c8] text-white transition-colors duration-200 shadow-md"
                   >
                     <RefreshCw size={18} />
                   </button>

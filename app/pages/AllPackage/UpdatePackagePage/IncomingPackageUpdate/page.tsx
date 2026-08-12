@@ -436,7 +436,7 @@ function IncomingPackageUpdateContent() {
                           type="button"
                           title="Generate Tracking Number"
                           onClick={() => handleChange("trackingNumber", generateTrackingNumber())}
-                          className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-[#0c244c] hover:bg-[#1a3a6e] text-white transition-colors duration-200 shadow-md"
+                          className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-[#0084c8] text-white transition-colors duration-200 shadow-md"
                         >
                           <RefreshCw size={18} />
                         </button>
@@ -631,7 +631,7 @@ function IncomingPackageUpdateContent() {
                           title="Generate Tracking Number"
                           onClick={() => setBatchTrackingNumberInput(generateTrackingNumber())}
                           disabled={isSaving || verificationMode === "completed"}
-                          className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-[#0c244c] hover:bg-[#1a3a6e] text-white transition-colors duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-[#0084c8] text-white transition-colors duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <RefreshCw size={18} />
                         </button>

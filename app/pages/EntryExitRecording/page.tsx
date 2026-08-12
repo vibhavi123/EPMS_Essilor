@@ -144,7 +144,7 @@ export default function GateControlPage() {
         setSelectedEmployee(employee);
       } else {
         setSelectedEmployee(null);
-        showToast(`Employee ID "${employeeId}" not found in database`, "error");
+        showToast(`Employee ID not found in database`, "error");
       }
     } catch (err) {
       // Error is intentionally ignored - using fallback behavior
@@ -501,7 +501,9 @@ export default function GateControlPage() {
                         <InputLabel label={mode === "employee" ? "Scan Employee ID *" : "Scan ID Card / Entry ID *"} />
                         <div className="relative">
                           <input
-                            type="text"
+                            type="password"
+                            autoComplete="new-password"
+                            inputMode="text"
                             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-lg text-center"
                             value={idInput}
                             onChange={(e) => {
@@ -605,9 +607,9 @@ export default function GateControlPage() {
                     onChange={(e) => setScanQuery(e.target.value)}
                     placeholder={
                       mode === "employee"
-                        ? "Scan or type Employee ID…"
+                        ? "Scan the Employee ID"
                         : mode === "visitor"
-                        ? "Scan or type ID Card / Entry ID…"
+                        ? "Scan The type ID Card / Entry ID…"
                         : "Type License Plate…"
                     }
                     autoComplete="off"

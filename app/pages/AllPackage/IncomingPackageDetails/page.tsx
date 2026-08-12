@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
 import { useNavigation } from "@/hooks/useNavigation";
-import { Pencil } from "lucide-react";
+import { Pencil, Search, X } from "lucide-react";
 
 // Helper function to format date only
 function formatDate(dateTimeString: string | null): string {
@@ -74,6 +74,7 @@ function IncomingPackageDetailContent() {
   const [error, setError] = useState<string | null>(null);
   const [canEdit, setCanEdit] = useState(false);
   const [canViewGuardVerifiedId, setCanViewGuardVerifiedId] = useState(false);
+  const [batchSearch, setBatchSearch] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -208,15 +209,52 @@ function IncomingPackageDetailContent() {
                   {data.mode === "batch" && data.batchTrackingNumbers.length > 0 && (
                     <>
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                        <h3 className="font-bold text-[#0c244c] mb-4">Batch Tracking Numbers</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {data.batchTrackingNumbers.map((tn, idx) => (
-                            <div key={idx} className="bg-white border border-blue-100 rounded p-3">
-                              <p className="text-xs text-gray-500 mb-1">Tracking #{idx + 1}</p>
-                              <p className="font-bold text-blue-600">{tn}</p>
-                            </div>
-                          ))}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                          <h3 className="font-bold text-[#0c244c]">
+                            Batch Tracking Numbers
+                            <span className="ml-2 text-sm font-normal text-gray-500">
+                              {batchSearch
+                                ? `${data.batchTrackingNumbers.filter((tn) => tn.toLowerCase().includes(batchSearch.toLowerCase())).length} of ${data.batchTrackingNumbers.length}`
+                                : `${data.batchTrackingNumbers.length} total`}
+                            </span>
+                          </h3>
+                          <div className="relative w-full sm:w-64">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                            <input
+                              type="text"
+                              value={batchSearch}
+                              onChange={(e) => setBatchSearch(e.target.value)}
+                              placeholder="Search tracking number…"
+                              className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                            {batchSearch && (
+                              <button
+                                type="button"
+                                onClick={() => setBatchSearch("")}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
                         </div>
+                        {(() => {
+                          const filtered = data.batchTrackingNumbers.filter((tn) =>
+                            tn.toLowerCase().includes(batchSearch.toLowerCase())
+                          );
+                          return filtered.length === 0 ? (
+                            <p className="text-sm text-gray-500 text-center py-4">No tracking numbers match &quot;{batchSearch}&quot;</p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {filtered.map((tn, idx) => (
+                                <div key={idx} className="bg-white border border-blue-100 rounded p-3">
+                                  <p className="text-xs text-gray-500 mb-1">#{data.batchTrackingNumbers.indexOf(tn) + 1}</p>
+                                  <p className="font-bold text-blue-600 font-mono text-sm">{tn}</p>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="border-t border-gray-100 my-4" />
                     </>

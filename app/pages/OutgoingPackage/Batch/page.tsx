@@ -535,7 +535,9 @@ export default function BatchOutgoingPackagePage() {
               <div className="md:col-span-6">
                 <InputLabel label="Scan Employee Barcode *" />
                 <input
-                  type="text"
+                  type="password"
+                  autoComplete="new-password"
+                  inputMode="text"
                   value={formData.employeeId}
                   placeholder="Scan Employee ID"
                   onChange={(e) => handleEmployeeIdChange(e.target.value)}

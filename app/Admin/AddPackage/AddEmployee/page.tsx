@@ -6,7 +6,7 @@ import { useNavigation } from "@/hooks/useNavigation";
 import EmployeeBarcodePrintCard from "@/components/EmployeeBarcodePrintCard";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { fetchNextEmployeeId } from "@/utils/idSequenceClient";
-import { X } from "lucide-react";
+import { X, Upload } from "lucide-react";
 
 type EmployeeRecord = {
   id?: number;
@@ -586,8 +586,18 @@ export default function AddEmployeePage() {
           <h1 className="text-3xl md:text-4xl font-bold text-[#0c244c]">
             Add Employee Information
           </h1>
-          <div className="bg-white px-6 py-2 rounded-lg shadow-sm border border-gray-100 text-sm font-medium text-gray-500">
-            {new Date().toLocaleDateString("en-US")}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => nav.goToImportEmployees()}
+              className="px-5 py-2.5 bg-[#3ea5d9] hover:bg-[#2d8ab8] text-white font-bold text-sm rounded-lg transition-all shadow-sm flex items-center gap-2"
+            >
+              <Upload size={16} />
+              Import Employees
+            </button>
+            <div className="bg-white px-6 py-2.5 rounded-lg shadow-sm border border-gray-100 text-sm font-medium text-gray-500">
+              {new Date().toLocaleDateString("en-US")}
+            </div>
           </div>
         </header>
 

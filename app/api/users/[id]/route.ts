@@ -131,7 +131,7 @@ export async function PATCH(
         return NextResponse.json({ success: false, message: "Username is required" }, { status: 400 });
       }
       const [dupRows] = await pool.query<RowDataPacket[]>(
-        "SELECT Id FROM Users WHERE Username = ? AND Id <> ? LIMIT 1",
+        "SELECT Id FROM Users WHERE REPLACE(LOWER(Username), ' ', '') = REPLACE(LOWER(?), ' ', '') AND Id <> ? LIMIT 1",
         [username, id]
       );
       if (dupRows.length > 0) {
@@ -145,6 +145,13 @@ export async function PATCH(
       const fullName = String(body.fullName ?? "").trim();
       if (!fullName) {
         return NextResponse.json({ success: false, message: "Full name is required" }, { status: 400 });
+      }
+      const [dupNameRows] = await pool.query<RowDataPacket[]>(
+        "SELECT Id FROM Users WHERE REPLACE(LOWER(FullName), ' ', '') = REPLACE(LOWER(?), ' ', '') AND Id <> ? LIMIT 1",
+        [fullName, id]
+      );
+      if (dupNameRows.length > 0) {
+        return NextResponse.json({ success: false, message: "Full Name already exists" }, { status: 409 });
       }
       updates.push("FullName = ?");
       queryParams.push(fullName);

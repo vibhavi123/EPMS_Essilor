@@ -118,12 +118,20 @@ export async function POST(request: NextRequest) {
     const pool: Pool = await getConnection();
     const accessId = accessIdInput || (await generateNextAccessId(pool, role));
 
-    const [dupRows] = await pool.query<RowDataPacket[]>(
-      "SELECT Id FROM Users WHERE Username = ? LIMIT 1",
+    const [dupUserRows] = await pool.query<RowDataPacket[]>(
+      "SELECT Id FROM Users WHERE REPLACE(LOWER(Username), ' ', '') = REPLACE(LOWER(?), ' ', '') LIMIT 1",
       [username]
     );
-    if (dupRows.length > 0) {
+    if (dupUserRows.length > 0) {
       return NextResponse.json({ success: false, message: "Username already exists" }, { status: 409 });
+    }
+
+    const [dupNameRows] = await pool.query<RowDataPacket[]>(
+      "SELECT Id FROM Users WHERE REPLACE(LOWER(FullName), ' ', '') = REPLACE(LOWER(?), ' ', '') LIMIT 1",
+      [fullName]
+    );
+    if (dupNameRows.length > 0) {
+      return NextResponse.json({ success: false, message: "Full Name already exists" }, { status: 409 });
     }
 
     const passwordHash = await hashPassword(password);
@@ -139,7 +147,19 @@ export async function POST(request: NextRequest) {
       [insertResult.insertId]
     );
 
-    await pool.query("INSERT INTO UserPermissions (AccessId) VALUES (?)", [accessId]).catch(() => {
+    await pool.query(
+      `INSERT INTO UserPermissions (
+        AccessId,
+        AddOngoingPackage,
+        AddIncomePackage,
+        AllPackagesView,
+        OutgoingVerification,
+        IncomeVerification,
+        EntryExitRecording,
+        VerifyHoldingPackages
+      ) VALUES (?, 1, 1, 1, 1, 1, 1, 1)`,
+      [accessId]
+    ).catch(() => {
       /* row may already exist */
     });
 

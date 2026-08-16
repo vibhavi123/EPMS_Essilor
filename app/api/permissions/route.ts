@@ -136,7 +136,19 @@ export async function GET(request: NextRequest) {
     );
 
     if (!permRows.length) {
-      await pool.query("INSERT INTO UserPermissions (AccessId) VALUES (?)", [accessId]);
+      await pool.query(
+        `INSERT INTO UserPermissions (
+          AccessId,
+          AddOngoingPackage,
+          AddIncomePackage,
+          AllPackagesView,
+          OutgoingVerification,
+          IncomeVerification,
+          EntryExitRecording,
+          VerifyHoldingPackages
+        ) VALUES (?, 1, 1, 1, 1, 1, 1, 1)`,
+        [accessId]
+      );
       [permRows] = await pool.query<RowDataPacket[]>(
         "SELECT * FROM UserPermissions WHERE AccessId = ? LIMIT 1",
         [accessId]

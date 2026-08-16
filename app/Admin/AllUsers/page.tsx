@@ -182,15 +182,14 @@ export default function AccessControlListPage() {
             className="flex items-center gap-2 bg-[#3ea5d9] hover:bg-[#3494c7] text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95"
           >
             <Plus size={24} />
-            <span className="text-lg">Add New</span>
+            <span className="text-lg">Add New User</span>
           </button>
           <button
             onClick={() => nav.goToAddGuard()}
             disabled={!viewerPermissions.guardManagementAdd}
             className="flex items-center gap-2 bg-[#3ea5d9] hover:bg-[#3494c7] text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95"
           >
-            <Plus size={24} />
-            <span className="text-lg">Add Guard</span>
+          <span className="text-lg">Guards & Barcodes</span>
           </button>
         </div>
 

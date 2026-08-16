@@ -38,6 +38,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const trimmedCompany = (employeeCompany ?? "").trim();
+    const [existingNameRows] = await pool.query<RowDataPacket[]>(
+      `SELECT Id, EmployeeId FROM Employees 
+       WHERE REPLACE(LOWER(EmployeeName), ' ', '') = REPLACE(LOWER(?), ' ', '') 
+         AND (REPLACE(LOWER(COALESCE(EmployeeCompany, '')), ' ', '') = REPLACE(LOWER(?), ' ', '') OR (EmployeeCompany IS NULL AND ? = ''))
+         AND IsActive = 1 
+       LIMIT 1`,
+      [employeeName.trim(), trimmedCompany, trimmedCompany]
+    );
+
+    if (existingNameRows.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `An employee with the name "${employeeName.trim()}" already exists in this company (${existingNameRows[0].EmployeeId})`,
+        },
+        { status: 409 }
+      );
+    }
+
     await pool.query<ResultSetHeader>(
       `INSERT INTO Employees (
         EmployeeId,

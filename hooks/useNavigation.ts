@@ -47,6 +47,7 @@ export const ROUTES = {
     CONTROL_USER: "/Admin/ControlUser",
     DELETE_USER: "/Admin/DeleteUser",
     ADD_PACKAGE: "/Admin/AddPackage",
+    IMPORT_EMPLOYEES: "/Admin/AddPackage/AddEmployee/Import",
     OVERDUE_SETTINGS: "/Admin/OverdueSettings",
     LOGIN_MONITOR: "/Admin/LoginMonitor",
   },
@@ -124,6 +125,7 @@ export function useNavigation() {
     goToControlUser: () => router.push(ROUTES.ADMIN.CONTROL_USER),
     goToDeleteUser: () => router.push(ROUTES.ADMIN.DELETE_USER),
     goToAddPackage: () => router.push(ROUTES.ADMIN.ADD_PACKAGE),
+    goToImportEmployees: () => router.push(ROUTES.ADMIN.IMPORT_EMPLOYEES),
     goToOverdueSettings: () => router.push(ROUTES.ADMIN.OVERDUE_SETTINGS),
     goToLoginMonitor: () => router.push(ROUTES.ADMIN.LOGIN_MONITOR),
   };

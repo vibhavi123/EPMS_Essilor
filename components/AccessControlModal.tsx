@@ -250,9 +250,9 @@ export default function AccessControlModal({ isOpen, selectedUser, onClose, onPe
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/30">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Modal Header */}
-        <div className="sticky top-0 bg-linear-to-r from-[#17a2b8] to-[#138496] p-6 flex justify-between items-center text-white border-b border-[#0e6674]">
+        <div className="bg-linear-to-r from-[#17a2b8] to-[#138496] p-6 flex justify-between items-center text-white border-b border-[#0e6674] shrink-0 z-10">
           <div className="flex items-center gap-3">
             <KeyRound className="w-6 h-6" />
             <div>
@@ -268,6 +268,9 @@ export default function AccessControlModal({ isOpen, selectedUser, onClose, onPe
             <X className="w-6 h-6" />
           </button>
         </div>
+
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto">
 
         {/* Alert Messages */}
         {isSelf && (
@@ -581,27 +584,28 @@ export default function AccessControlModal({ isOpen, selectedUser, onClose, onPe
                 />
               </div>
             </div>
-
-            {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-white flex gap-4 justify-center p-5 border-t border-gray-200">
-              <button
-                onClick={savePermissions}
-                disabled={isSaving || isSelf}
-                className="px-8 py-3 bg-[#17a2b8] hover:bg-[#138496] disabled:bg-gray-400 text-white font-bold rounded-lg transition-colors flex items-center gap-2"
-              >
-                {isSaving && <Loader className="w-4 h-4 animate-spin" />}
-                {isSaving ? "Saving..." : "Save Changes"}
-              </button>
-              <button
-                onClick={onClose}
-                disabled={isSaving}
-                className="px-8 py-3 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 font-bold rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
           </>
         )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="bg-white flex gap-4 justify-center p-5 border-t border-gray-200 shrink-0 z-10">
+          <button
+            onClick={savePermissions}
+            disabled={isSaving || isSelf}
+            className="px-8 py-3 bg-[#17a2b8] hover:bg-[#138496] disabled:bg-gray-400 text-white font-bold rounded-lg transition-colors flex items-center gap-2"
+          >
+            {isSaving && <Loader className="w-4 h-4 animate-spin" />}
+            {isSaving ? "Saving..." : "Save Changes"}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={isSaving}
+            className="px-8 py-3 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 font-bold rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

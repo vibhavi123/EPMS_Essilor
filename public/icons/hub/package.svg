@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="pkgGrad" x1="10" y1="10" x2="54" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#6D28D9"/>
+    </linearGradient>
+    <linearGradient id="boxTop" x1="14" y1="12" x2="50" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C4B5FD"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="boxLeft" x1="14" y1="28" x2="32" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#5B21B6"/>
+    </linearGradient>
+    <linearGradient id="boxRight" x1="32" y1="28" x2="50" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6D28D9"/>
+      <stop offset="100%" stop-color="#4C1D95"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Glow -->
+  <circle cx="32" cy="32" r="28" fill="url(#pkgGrad)" fill-opacity="0.12"/>
+  <!-- Isometric Box Top -->
+  <path d="M32 10L50 20L32 30L14 20L32 10Z" fill="url(#boxTop)"/>
+  <!-- Isometric Box Left -->
+  <path d="M14 20L32 30V54L14 44V20Z" fill="url(#boxLeft)"/>
+  <!-- Isometric Box Right -->
+  <path d="M32 30L50 20V44L32 54V30Z" fill="url(#boxRight)"/>
+  <!-- Tape Strip Top -->
+  <path d="M28 12.2L36 16.7L36 30L28 25.5V12.2Z" fill="#FDE047" fill-opacity="0.85"/>
+  <!-- Tape Strip Front -->
+  <path d="M32 30V54H36V32.2L32 30Z" fill="#EAB308"/>
+  <!-- Fragile / Checkmark Tag on Side -->
+  <rect x="18" y="28" width="10" height="12" rx="2" transform="skewY(27)" fill="#FFFFFF" fill-opacity="0.9"/>
+  <line x1="20" y1="36" x2="26" y2="39" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="20" y1="39" x2="24" y2="41" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="custGrad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#0E7490"/>
+    </linearGradient>
+    <linearGradient id="custBuilding" x1="14" y1="16" x2="50" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Glow -->
+  <circle cx="32" cy="32" r="28" fill="url(#custGrad)" fill-opacity="0.12"/>
+  <!-- Main Corporate Building -->
+  <rect x="22" y="14" width="28" height="42" rx="4" fill="url(#custBuilding)"/>
+  <!-- Small Side Building -->
+  <rect x="12" y="26" width="14" height="30" rx="3" fill="#0E7490"/>
+  <!-- Windows on Main Building -->
+  <rect x="26" y="19" width="5" height="4" rx="1" fill="#E0F2FE"/>
+  <rect x="34" y="19" width="5" height="4" rx="1" fill="#E0F2FE"/>
+  <rect x="42" y="19" width="5" height="4" rx="1" fill="#E0F2FE"/>
+  <rect x="26" y="27" width="5" height="4" rx="1" fill="#E0F2FE"/>
+  <rect x="34" y="27" width="5" height="4" rx="1" fill="#E0F2FE"/>
+  <rect x="42" y="27" width="5" height="4" rx="1" fill="#E0F2FE"/>
+  <rect x="26" y="35" width="5" height="4" rx="1" fill="#E0F2FE"/>
+  <rect x="34" y="35" width="5" height="4" rx="1" fill="#E0F2FE"/>
+  <rect x="42" y="35" width="5" height="4" rx="1" fill="#E0F2FE"/>
+  <!-- Windows on Side Building -->
+  <rect x="15" y="31" width="4" height="3.5" rx="0.8" fill="#A5F3FC"/>
+  <rect x="15" y="38" width="4" height="3.5" rx="0.8" fill="#A5F3FC"/>
+  <rect x="15" y="45" width="4" height="3.5" rx="0.8" fill="#A5F3FC"/>
+  <!-- Building Entrance -->
+  <rect x="32" y="45" width="8" height="11" rx="2" fill="#155E75"/>
+  <rect x="33.5" y="47" width="5" height="9" rx="1" fill="#E0F2FE"/>
+  <!-- User Badge Accent in Foreground -->
+  <circle cx="48" cy="46" r="10" fill="#0284C7" stroke="#FFFFFF" stroke-width="2"/>
+  <circle cx="48" cy="43.5" r="3.5" fill="#FFFFFF"/>
+  <path d="M42.5 52C42.5 49 45 47.5 48 47.5C51 47.5 53.5 49 53.5 52" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+</svg>

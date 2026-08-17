@@ -252,11 +252,14 @@ function EditUserContent() {
 
   if (isCheckingPermissions) {
     return (
-      <div className="flex h-screen bg-[#f8f9fc]">
+      <div className="flex min-h-screen bg-[#f8f9fc]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500">Checking permissions...</p>
-        </div>
+        <main className="min-h-screen flex-1 lg:ml-72 flex items-center justify-center p-6">
+          <div className="flex flex-col items-center gap-3 animate-rise">
+            <div className="size-9 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+            <p className="text-sm font-semibold text-navy">Checking permissions...</p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -266,105 +269,113 @@ function EditUserContent() {
   const isSuperAdmin = formData.role.toLowerCase() === "superadmin";
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+    <div className="flex min-h-screen bg-[#f8f9fc]">
       <Sidebar />
 
-      <main className="flex-1 lg:ml-72 p-4 md:p-10 pt-24 lg:pt-10 transition-all duration-300">
-        <header className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
+      <main className="min-h-screen flex-1 min-w-0 px-4 pb-16 pt-20 lg:ml-72 lg:px-8 lg:pt-10">
+        {/* Page Header */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between animate-rise">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-[#0c244c]">Edit User</h1>
-            <p className="mt-2 text-sm text-gray-500">Update user information. Only specific fields can be edited.</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Access Control</p>
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">Edit User Profile</h1>
           </div>
-          {!isSuperAdmin && (
+          <div className="flex flex-wrap gap-2">
+            {!isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsAccessControlOpen(true)}
+                disabled={!viewerPermissions.accessManagementControl}
+                className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 disabled:pointer-events-none disabled:opacity-45"
+                title="Manage user permissions and access control"
+              >
+                <KeyRound className="size-4" />
+                <span>Access Control</span>
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setIsAccessControlOpen(true)}
-              disabled={!viewerPermissions.accessManagementControl}
-              className="flex items-center gap-2 px-4 py-2 bg-[#17a2b8] hover:bg-[#138496] text-white font-bold rounded-lg transition-all"
-              title="Manage user permissions and access control"
+              onClick={() => nav.goToAllUsers()}
+              className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent disabled:pointer-events-none disabled:opacity-45"
             >
-              <KeyRound className="w-5 h-5" />
-              <span className="whitespace-nowrap">Access Control</span>
+              Back to Users
             </button>
-          )}
-        </header>
-
-        <hr className="border-gray-300 mb-10" />
+          </div>
+        </div>
 
         {isLoading ? (
-          <div className="max-w-7xl mx-auto rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-700">
+          <div className="mt-7 surface-card p-8 text-center text-sm text-muted-foreground animate-rise w-full">
             Loading user details...
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="mt-7 w-full space-y-6 animate-rise">
             {isSuperAdmin && (
-              <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-2xl text-purple-900 text-sm font-semibold flex items-center gap-3 shadow-xs">
-                <span>Super Admin accounts automatically possess permanent full system control. Access control permissions cannot be modified for Super Admin users.</span>
+              <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/8 p-4 text-sm font-medium text-navy">
+                <ShieldCheck className="size-5 text-primary shrink-0" />
+                <span>Super Admin accounts automatically possess permanent full system control. Permissions cannot be restricted.</span>
               </div>
             )}
-            <section className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
-              <h2 className="text-2xl font-semibold text-[#4a5568] mb-8">Account Information</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Read-only fields */}
-                <div>
-                  <label className="block text-sm font-semibold text-[#2d3748] mb-3">Access ID (Read-only)</label>
-                  <input
-                    type="text"
-                    className="form-input-essilor bg-gray-100"
-                    value={formData.accessId}
-                    readOnly
-                  />
+            <section className="surface-card p-6 sm:p-8 space-y-6 w-full">
+              <h2 className="text-base font-bold text-navy border-b border-border pb-3">Account Information</h2>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                {/* Read-only Access ID */}
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Access ID (Read-only)</label>
+                  <div className="flex h-11 items-center rounded-lg border border-dashed border-primary/40 bg-primary/6 px-3 font-mono text-sm font-bold text-navy">
+                    {formData.accessId}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-[#2d3748] mb-3">Role (Read-only)</label>
-                  <input
-                    type="text"
-                    className="form-input-essilor bg-gray-100"
-                    value={formData.role}
-                    readOnly
-                  />
+                {/* Read-only Role */}
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Role (Read-only)</label>
+                  <div className="flex h-11 items-center rounded-lg border border-border bg-secondary/50 px-3 text-sm font-semibold text-navy">
+                    {formData.role}
+                  </div>
                 </div>
 
-                {/* Editable fields */}
-                <div>
-                  <label className="block text-sm font-semibold text-[#2d3748] mb-3">Username *</label>
+                {/* Editable Username */}
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Username *</label>
                   <input
                     type="text"
-                    className="form-input-essilor"
+                    className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                     value={formData.username}
                     onChange={(e) => handleInputChange(e, "username")}
                     disabled={isSubmitting}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-[#2d3748] mb-3">Full Name *</label>
+                {/* Editable Full Name */}
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Full Name *</label>
                   <input
                     type="text"
-                    className="form-input-essilor"
+                    className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                     value={formData.fullName}
                     onChange={(e) => handleInputChange(e, "fullName")}
                     disabled={isSubmitting}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-[#2d3748] mb-3">Company</label>
+                {/* Company */}
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Company</label>
                   <input
                     type="text"
-                    className="form-input-essilor"
+                    className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                     value={formData.company}
                     onChange={(e) => handleInputChange(e, "company")}
                     disabled={isSubmitting}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-[#2d3748] mb-3">User Status</label>
+                {/* User Status */}
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Account Status</label>
                   <select
-                    className="form-input-essilor"
+                    className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm font-medium text-navy transition-all hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                     value={formData.isActive ? "active" : "deactivated"}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -379,27 +390,29 @@ function EditUserContent() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-[#2d3748] mb-3">Password (Optional)</label>
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Password (Optional)</label>
                   <input
                     type="password"
-                    className="form-input-essilor"
-                    placeholder="Leave blank to keep current password"
+                    className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                    placeholder="Leave blank to keep current"
                     value={formData.password}
                     onChange={(e) => handleInputChange(e, "password")}
                     disabled={isSubmitting}
                   />
-                  <p className="mt-1.5 text-xs font-medium text-gray-500">
-                    If changing, must be at least 6 characters with a special character (e.g. @, #, $, !).
+                  <p className="text-[11px] text-muted-foreground">
+                    Min 6 chars with a special symbol (e.g. @, #, $, !).
                   </p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-[#2d3748] mb-3">Confirm Password</label>
+                {/* Confirm Password */}
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Confirm Password</label>
                   <input
                     type="password"
-                    className="form-input-essilor"
-                    placeholder="Confirm the new password"
+                    className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                    placeholder="Confirm new password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange(e, "confirmPassword")}
                     disabled={isSubmitting}
@@ -407,18 +420,19 @@ function EditUserContent() {
                 </div>
               </div>
 
-              <div className="mt-10 flex justify-end gap-3">
+              {/* Form Action Buttons */}
+              <div className="flex flex-wrap gap-2 border-t border-border pt-5 justify-end">
                 <button
                   type="button"
                   onClick={() => nav.goToAllUsers()}
-                  className="px-6 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold transition-all active:scale-95"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || (!viewerPermissions.accessManagementEdit && !viewerPermissions.accessManagementControl)}
-                  className="px-6 py-3 rounded-xl bg-[#0084c8] hover:bg-[#0071ad] disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold transition-all active:scale-95"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-5 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 disabled:pointer-events-none disabled:opacity-45"
                 >
                   {isSubmitting ? "Updating..." : "Update User"}
                 </button>
@@ -427,32 +441,6 @@ function EditUserContent() {
           </form>
         )}
 
-        <style jsx>{`
-          .form-input-essilor {
-            width: 100%;
-            padding: 0.85rem 1.25rem;
-            background-color: #f1f3f5;
-            border: 1px solid #ced4da;
-            border-radius: 0.75rem;
-            outline: none;
-            font-size: 1rem;
-            font-weight: 500;
-            color: #495057;
-            transition: all 0.2s ease;
-          }
-
-          .form-input-essilor:focus {
-            background-color: #fff;
-            border-color: #0084c8;
-            box-shadow: 0 0 0 4px rgba(0, 132, 200, 0.1);
-          }
-
-          .form-input-essilor:disabled {
-            background-color: #e9ecef;
-            color: #6c757d;
-            cursor: not-allowed;
-          }
-        `}</style>
       </main>
 
       <AlertModal

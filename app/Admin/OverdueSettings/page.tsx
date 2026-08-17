@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import { useNavigation } from "@/hooks/useNavigation";
+import { Info, Save, RotateCcw, Timer, AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 
 export default function OverdueSettingsPage() {
   const nav = useNavigation();
@@ -51,11 +52,14 @@ export default function OverdueSettingsPage() {
 
   if (isCheckingPermissions) {
     return (
-      <div className="flex h-screen bg-[#f8f9fc]">
+      <div className="flex min-h-screen bg-[#f8f9fc]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500">Checking permissions...</p>
-        </div>
+        <main className="min-h-screen flex-1 lg:ml-72 flex items-center justify-center p-6">
+          <div className="flex flex-col items-center gap-3 animate-rise">
+            <div className="size-9 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+            <p className="text-sm font-semibold text-navy">Checking permissions...</p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -85,28 +89,77 @@ export default function OverdueSettingsPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+    <div className="flex min-h-screen bg-[#f8f9fc]">
       <Sidebar />
+      <main className="min-h-screen flex-1 min-w-0 px-4 pb-16 pt-20 lg:ml-72 lg:px-8 lg:pt-10">
+        {/* Page header */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="animate-rise">
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">Overdue Alert Settings</h1>
+          </div>
+        </div>
 
-      <main className="flex-1 lg:ml-72 p-4 md:p-8 pt-24 lg:pt-10 transition-all">
-        <div className="p-6 bg-white rounded-2xl shadow-sm">
-          <h1 className="text-2xl font-bold mb-4">Overdue Settings</h1>
-          <div className="space-y-3 max-w-sm">
-            <label className="block text-sm font-bold text-gray-700">Overdue Hours</label>
-            <input
-              type="number"
-              min={1}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="w-full px-4 py-3 border rounded-lg"
-            />
-            <div className="flex gap-3">
-              <button onClick={handleSave} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg">
-                {loading ? "Saving..." : "Save"}
+        <div className="mt-7 max-w-2xl space-y-5">
+
+          {/* Success/error banner */}
+          {message && (
+            <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium animate-rise ${
+              message === 'Saved'
+                ? 'border-success/30 bg-success/10 text-success'
+                : 'border-destructive/30 bg-destructive/10 text-destructive'
+            }`}>
+              {message === 'Saved'
+                ? <CheckCircle2 className="size-5 shrink-0" />
+                : <AlertTriangle className="size-5 shrink-0" />}
+              <span className="flex-1">{message === 'Saved' ? 'Settings saved successfully.' : message}</span>
+              <button onClick={() => setMessage(null)} className="opacity-60 transition-opacity hover:opacity-100">
+                <X className="size-4" />
               </button>
-              <button onClick={() => setValue("")} className="px-4 py-2 bg-gray-200 rounded-lg">Reset</button>
             </div>
-            {message && <p className="text-sm text-gray-600">{message}</p>}
+          )}
+
+          {/* Settings card */}
+          <div className="surface-card space-y-5 p-6 animate-rise">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 place-items-center rounded-xl bg-gradient-brand text-white">
+                <Timer className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-navy">Overdue Hours Threshold</h2>
+                <p className="text-[13px] text-muted-foreground">Minimum 1 hour. Applies to all employees immediately after saving.</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Overdue Hours</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  className="h-11 max-w-40 rounded-lg border border-border bg-card px-3 font-mono text-base font-bold text-navy transition-all hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                />
+                <span className="text-sm font-medium text-muted-foreground">hours</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 border-t border-border pt-5">
+              <button
+                onClick={handleSave}
+                disabled={loading}
+                className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 disabled:pointer-events-none disabled:opacity-45"
+              >
+                {loading ? <> Save Settings...</> : <> Save Settings</>}
+              </button>
+              <button
+                onClick={() => setValue('')}
+                disabled={loading}
+                className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none"
+              >
+                <RotateCcw className="size-4" /> Reset
+              </button>
+            </div>
           </div>
         </div>
       </main>

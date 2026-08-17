@@ -76,15 +76,15 @@ export default function Sidebar() {
   const getRoleBadgeStyle = (role?: string) => {
     switch (role?.toLowerCase()) {
       case 'superadmin':
-        return { label: 'Super Admin', style: 'bg-purple-100 text-purple-800 border-purple-300' };
+        return { label: 'Super Admin', style: 'bg-role-super/12 text-role-super ring-1 ring-inset ring-role-super/25' };
       case 'admin':
-        return { label: 'Admin', style: 'bg-blue-100 text-blue-800 border-blue-300' };
+        return { label: 'Admin', style: 'bg-role-admin/12 text-role-admin ring-1 ring-inset ring-role-admin/25' };
       case 'guard':
-        return { label: 'Guard', style: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+        return { label: 'Guard', style: 'bg-role-guard/14 text-role-guard ring-1 ring-inset ring-role-guard/25' };
       case 'employee':
-        return { label: 'Employee', style: 'bg-amber-100 text-amber-800 border-amber-300' };
+        return { label: 'Employee', style: 'bg-role-employee/12 text-role-employee ring-1 ring-inset ring-role-employee/25' };
       default:
-        return { label: role || 'User', style: 'bg-gray-100 text-gray-700 border-gray-300' };
+        return { label: role || 'User', style: 'bg-secondary text-muted-foreground ring-1 ring-inset ring-border' };
     }
   };
 
@@ -328,25 +328,26 @@ export default function Sidebar() {
 
         {/* User Profile Card */}
         <div className="px-3.5 pt-3 pb-1 shrink-0">
-          <div className="p-3 rounded-2xl bg-white/90 border border-gray-300/70 shadow-xs flex items-center gap-3 transition-all hover:border-gray-400/80">
+          <div className="surface-card p-3 flex items-center gap-3 transition-all hover:border-primary/40">
             {/* Avatar Circle */}
-            <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold text-sm shadow-xs border border-white/20">
-              {userProfile ? getInitials(userProfile.fullName, userProfile.username) : <User className="w-5 h-5" />}
+            <div className="relative shrink-0 size-10 rounded-xl bg-gradient-navy text-white flex items-center justify-center font-bold text-xs shadow-sm border border-white/10">
+              {userProfile ? getInitials(userProfile.fullName, userProfile.username) : <User className="size-5" />}
+              <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-success ring-2 ring-white" />
             </div>
 
             {/* User Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-bold text-gray-900 truncate leading-tight tracking-tight">
+              <p className="text-[13px] font-bold text-navy truncate leading-tight">
                 {userProfile?.fullName || userProfile?.username || 'Authenticated User'}
               </p>
               {userProfile?.username && userProfile?.fullName && (
-                <p className="text-[11px] font-medium text-gray-500 truncate leading-tight">
+                <p className="text-[11px] font-medium text-muted-foreground truncate leading-tight mt-0.5">
                   @{userProfile.username}
                 </p>
               )}
               {userRole && (
-                <div className="mt-1 flex items-center gap-1">
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${roleInfo.style}`}>
+                <div className="mt-1.5 flex items-center gap-1">
+                  <span className={`inline-flex items-center text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-full ring-1 ring-inset ${roleInfo.style}`}>
                     {roleInfo.label}
                   </span>
                 </div>

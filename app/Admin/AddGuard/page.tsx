@@ -5,7 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import { useNavigation } from "@/hooks/useNavigation";
 import GuardBarcodePrintCard from "@/components/GuardBarcodePrintCard";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
-import { X } from "lucide-react";
+import { X, Search, Trash2, ArrowLeft, AlertTriangle, Loader2 } from "lucide-react";
 
 type GuardRecord = {
   id?: number;
@@ -136,11 +136,14 @@ export default function AddGuardPage() {
 
   if (isCheckingPermissions) {
     return (
-      <div className="flex h-screen bg-[#f8f9fc]">
+      <div className="flex min-h-screen bg-[#f8f9fc]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500">Checking permissions...</p>
-        </div>
+        <main className="min-h-screen flex-1 lg:ml-72 flex items-center justify-center p-6">
+          <div className="flex flex-col items-center gap-3 animate-rise">
+            <div className="size-9 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+            <p className="text-sm font-semibold text-navy">Checking permissions...</p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -148,53 +151,73 @@ export default function AddGuardPage() {
   if (!hasPermission) return null;
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+    <div className="flex min-h-screen bg-[#f8f9fc]">
       <Sidebar />
 
-      <main className="flex-1 lg:ml-72 p-4 md:p-8 pt-24 lg:pt-10 transition-all">
+      <main className="min-h-screen flex-1 min-w-0 px-4 pb-16 pt-20 lg:ml-72 lg:px-8 lg:pt-10">
         {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
-          <h1 className="text-3xl md:text-4xl font-bold text-[#0c244c]">
-            Guards &amp; Barcodes
-          </h1>
-          <div className="bg-white px-6 py-2 rounded-lg shadow-sm border border-gray-100 text-sm font-medium text-gray-500">
-            {new Date().toLocaleDateString("en-US")}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between animate-rise">
+          <div>
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">
+              Guards &amp; Barcodes
+            </h1>
+
           </div>
-        </header>
+          <div>
+            <button 
+              onClick={() => nav.goToAllUsers()} 
+              className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] transition-all"
+            >
+              <ArrowLeft className="size-4" /> Back to Users
+            </button>
+          </div>
+        </div>
 
-        <hr className="border-gray-200 mb-10" />
-
-        <div className="max-w-5xl mx-auto">
-
-          {/* Guards List */}
-          <section className="bg-white p-8 rounded-lg shadow-md">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6">
+        {/* Selected Guard Barcode Print Card */}
+        {selectedGuard && (
+          <div className="mt-7 surface-card p-6 animate-rise border-l-4 border-l-primary shadow-lift">
+            <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-[#0c244c]">All Guards</h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Click a row to view and print the guard&apos;s barcode.
+                <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Selected Guard</p>
+                <h3 className="text-lg font-extrabold text-navy">{selectedGuard.guardName}</h3>
+                <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                  Access ID: <span className="font-bold text-navy">{selectedGuard.accessId}</span>
                 </p>
               </div>
-              <div className="text-sm text-gray-500">
-                {guardsLoading
-                  ? "Loading guards..."
-                  : `${guards.length} guards · Page ${currentPage} of ${totalPages || 1}`}
-              </div>
+              <button 
+                onClick={() => setSelectedGuard(null)} 
+                className="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-navy transition-colors"
+                aria-label="Close"
+              >
+                <X className="size-5" />
+              </button>
             </div>
+            <GuardBarcodePrintCard
+              guard={selectedGuard}
+              onAddAnother={() => setSelectedGuard(null)}
+            />
+          </div>
+        )}
 
-            {/* Search */}
-            <form onSubmit={handleSearch} className="mb-6 flex flex-col md:flex-row gap-3">
+        {/* Guards Directory Table Card */}
+        <section className="surface-card overflow-hidden animate-rise mt-7">
+          <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <form onSubmit={handleSearch} className="relative flex-1 sm:max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 value={guardSearchQuery}
                 onChange={(e) => setGuardSearchQuery(e.target.value)}
                 placeholder="Search by Access ID or name"
-                className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3ea5d9]"
+                className="h-11 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-sm text-navy placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
               />
+            </form>
+            <div className="flex items-center gap-2">
               <button
-                type="submit"
+                type="button"
+                onClick={handleSearch}
                 disabled={guardsLoading}
-                className="px-6 py-3 bg-[#3ea5d9] hover:bg-[#2d8ab8] disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all"
+                className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 sm:h-9 px-4 sm:px-3 text-[13px] bg-gradient-brand text-white shadow-card hover:brightness-110 active:scale-[0.97] disabled:opacity-45"
               >
                 Search
               </button>
@@ -202,157 +225,154 @@ export default function AddGuardPage() {
                 type="button"
                 onClick={() => void handleClear()}
                 disabled={guardsLoading || (!guardSearchQuery && !activeGuardSearch)}
-                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all"
+                className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 sm:h-9 px-4 sm:px-3 text-[13px] bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] disabled:opacity-45"
               >
-                Clear
+                <X className="size-4" /> Clear
               </button>
-            </form>
+            </div>
+          </div>
 
-            {activeGuardSearch && (
-              <div className="mb-4 text-sm text-gray-500">
-                Results for &quot;<span className="font-semibold">{activeGuardSearch}</span>&quot;
-              </div>
-            )}
+          {activeGuardSearch && (
+            <div className="px-5 py-2.5 bg-secondary/40 border-b border-border text-xs text-muted-foreground">
+              Results for &quot;<span className="font-semibold text-navy">{activeGuardSearch}</span>&quot;
+            </div>
+          )}
 
-            {guardsError && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-                <p className="text-red-700 font-medium">{guardsError}</p>
-              </div>
-            )}
+          {guardsError && (
+            <div className="p-4 border-b border-border bg-destructive/5 text-sm text-destructive font-medium flex items-center gap-2">
+              <AlertTriangle className="size-4 shrink-0" />
+              <span>{guardsError}</span>
+            </div>
+          )}
 
-            {guardsLoading ? (
-              <div className="py-10 text-center text-gray-500">Loading guard records...</div>
-            ) : guards.length === 0 ? (
-              <div className="py-10 text-center text-gray-500">No guards found.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr className="text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                      <th className="px-4 py-3">Access ID</th>
-                      <th className="px-4 py-3">Name</th>
-                      <th className="px-4 py-3">Company</th>
-                      <th className="px-4 py-3">Department</th>
-                      <th className="px-4 py-3">Created</th>
-                      <th className="px-4 py-3 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {paginatedGuards.map((guard) => (
-                      <tr
-                        key={guard.id ?? guard.accessId}
-                        onClick={() => setSelectedGuard(guard)}
-                        className={`cursor-pointer transition-all ${
-                          selectedGuard?.accessId === guard.accessId
-                            ? "bg-blue-50 hover:bg-blue-100"
-                            : "hover:bg-gray-50"
-                        }`}
-                      >
-                        <td className="px-4 py-4 font-mono text-sm font-semibold text-[#0c244c]">
-                          {guard.accessId}
-                        </td>
-                        <td className="px-4 py-4 text-sm font-medium text-gray-800">
-                          {guard.guardName}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {guard.guardCompany || "—"}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {guard.department || "—"}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {guard.createdAt
-                            ? new Date(guard.createdAt).toLocaleDateString("en-US")
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); handleDelete(guard); }}
-                            disabled={deletingGuardId === (guard.id?.toString() || guard.accessId)}
-                            className="px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-all"
-                          >
-                            {deletingGuardId === (guard.id?.toString() || guard.accessId)
-                              ? "Removing..."
-                              : "Remove"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="text-sm text-gray-600">
-                  Showing {startIndex + 1}–{Math.min(startIndex + guardsPerPage, guards.length)} of {guards.length} guards
-                </div>
-                <div className="flex gap-2 items-center flex-wrap justify-center">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                    disabled={currentPage === 1 || guardsLoading}
-                    className="px-4 py-2 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-800 font-bold rounded-lg transition-all"
+          <div className="overflow-x-auto">
+            <table className="w-full text-left table-fixed">
+              <thead>
+                <tr className="bg-secondary/70">
+                  <th className="w-36 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Access ID</th>
+                  <th className="w-auto px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Name</th>
+                  <th className="w-40 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Company</th>
+                  <th className="w-40 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Department</th>
+                  <th className="w-36 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Created</th>
+                  <th className="w-20 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground text-right">Delete</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {paginatedGuards.map((guard) => (
+                  <tr
+                    key={guard.id ?? guard.accessId}
+                    onClick={() => setSelectedGuard(guard)}
+                    className={`cursor-pointer transition-colors ${
+                      selectedGuard?.accessId === guard.accessId
+                        ? "bg-primary/8"
+                        : "hover:bg-secondary/60"
+                    }`}
                   >
-                    Previous
-                  </button>
-                  {getPageNumbers(currentPage, totalPages).map((page, idx) =>
-                    typeof page === "number" ? (
+                    <td className="relative px-5 py-3.5 font-mono text-[13px] font-semibold text-navy">
+                      {selectedGuard?.accessId === guard.accessId && (
+                        <span className="absolute inset-y-0 left-0 w-1 rounded-r bg-primary" />
+                      )}
+                      {guard.accessId}
+                    </td>
+                    <td className="px-5 py-3.5 text-sm font-semibold text-navy break-words break-all">
+                      {guard.guardName}
+                    </td>
+                    <td className="px-5 py-3.5 text-sm text-muted-foreground">
+                      {guard.guardCompany || "-"}
+                    </td>
+                    <td className="px-5 py-3.5 text-sm text-muted-foreground">
+                      {guard.department || "-"}
+                    </td>
+                    <td className="px-5 py-3.5 text-[13px] text-muted-foreground whitespace-nowrap">
+                      {guard.createdAt
+                        ? new Date(guard.createdAt).toLocaleDateString("en-US")
+                        : "-"}
+                    </td>
+                    <td className="px-5 py-3.5 text-right whitespace-nowrap">
                       <button
-                        key={`page-${page}`}
-                        onClick={() => setCurrentPage(page)}
-                        className={`px-3 py-2 rounded-lg font-bold text-sm transition-all ${
-                          currentPage === page
-                            ? "bg-[#3ea5d9] text-white"
-                            : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                        }`}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(guard);
+                        }}
+                        disabled={deletingGuardId === (guard.id?.toString() || guard.accessId)}
+                        className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive active:scale-95 disabled:opacity-50"
+                        aria-label="Delete"
                       >
-                        {page}
+                        {deletingGuardId === (guard.id?.toString() || guard.accessId) ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-4" />
+                        )}
                       </button>
-                    ) : (
-                      <span key={`ellipsis-${idx}`} className="px-2 py-1 text-gray-500 font-bold text-sm">
-                        {page}
-                      </span>
-                    )
-                  )}
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                    disabled={currentPage === totalPages || guardsLoading}
-                    className="px-4 py-2 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-800 font-bold rounded-lg transition-all"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
+                    </td>
+                  </tr>
+                ))}
+                {guardsLoading && (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="size-5 animate-spin text-primary" />
+                        <span>Loading guard records...</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {!guardsLoading && guards.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                      No guards found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
-            {/* Barcode card for selected guard */}
-            {selectedGuard && (
-              <div className="mt-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-blue-900">{selectedGuard.guardName}</h3>
-                    <p className="text-sm text-blue-700 mt-1">
-                      Access ID: <span className="font-mono font-bold">{selectedGuard.accessId}</span>
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedGuard(null)}
-                    className="p-1 hover:bg-blue-200 rounded-lg transition-all"
-                  >
-                    <X size={20} className="text-blue-600" />
-                  </button>
-                </div>
-                <GuardBarcodePrintCard
-                  guard={selectedGuard}
-                  onAddAnother={() => setSelectedGuard(null)}
-                />
+          {/* Pagination */}
+          {guards.length > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-5 py-3 flex-wrap gap-3">
+              <p className="text-[13px] text-muted-foreground">
+                Showing <span className="font-medium text-navy">{startIndex + 1}</span> to <span className="font-medium text-navy">{Math.min(startIndex + guardsPerPage, guards.length)}</span> of <span className="font-medium text-navy">{guards.length}</span> guards
+              </p>
+              <div className="flex gap-1 items-center">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1 || guardsLoading}
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-card px-3 text-[13px] font-medium text-navy transition-all hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                {getPageNumbers(currentPage, totalPages).map((page, idx) =>
+                  typeof page === "number" ? (
+                    <button
+                      key={`page-${page}`}
+                      onClick={() => setCurrentPage(page)}
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-[13px] font-semibold transition-all ${
+                        currentPage === page
+                          ? "bg-gradient-brand text-white shadow-sm"
+                          : "border border-border bg-card text-navy hover:bg-accent"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ) : (
+                    <span key={`ellipsis-${idx}`} className="inline-flex h-8 w-8 items-center justify-center text-muted-foreground text-xs font-bold">
+                      {page}
+                    </span>
+                  )
+                )}
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages || guardsLoading}
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-card px-3 text-[13px] font-medium text-navy transition-all hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Next
+                </button>
               </div>
-            )}
-          </section>
-        </div>
+            </div>
+          )}
+        </section>
 
         <DeleteConfirmModal
           isOpen={guardToDelete !== null}
@@ -371,3 +391,4 @@ export default function AddGuardPage() {
     </div>
   );
 }
+

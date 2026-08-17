@@ -172,26 +172,26 @@ export default function GuardBarcodePrintCard({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-4 justify-center mt-6">
+      <div className="flex flex-wrap gap-3 justify-center mt-6">
         <button
           onClick={handlePrint}
-          className="flex items-center gap-2 px-6 py-3 bg-[#3ea5d9] hover:bg-[#2d8ab8] text-white font-bold rounded-lg transition-all shadow-md"
+          className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-5 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 active:scale-[0.97] transition-all"
         >
           <Printer size={18} />
-          Print
+          Print Card
         </button>
         <button
           onClick={handleDownload}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all shadow-md"
+          className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-5 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] transition-all"
         >
           <Download size={18} />
-          Download
+          Download PNG
         </button>
         <button
           onClick={onAddAnother}
-          className="flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-all shadow-md"
+          className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-5 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] transition-all"
         >
-          Add Another
+          Done
         </button>
       </div>
     </div>

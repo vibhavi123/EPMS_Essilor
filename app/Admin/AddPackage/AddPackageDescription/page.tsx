@@ -6,6 +6,7 @@ import { useNavigation } from "@/hooks/useNavigation";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 import { createPackageDescription } from "@/lib/api/packageDescriptions";
 import { PackageDescription } from "@/utils/formTypes";
+import { ArrowLeft, CheckCircle2, AlertTriangle, Loader2, Plus, Search, X, Trash2 } from "lucide-react";
 
 type PackageDescriptionListItem = {
   id: number;
@@ -378,136 +379,153 @@ export default function AddPackagePage() {
 
   if (isCheckingPermissions) {
     return (
-      <div className="flex h-screen bg-[#f8f9fc]">
+      <div className="flex min-h-screen bg-[#f8f9fc]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500">Checking permissions...</p>
-        </div>
+        <main className="min-h-screen flex-1 lg:ml-72 flex items-center justify-center p-6">
+          <div className="flex flex-col items-center gap-3 animate-rise">
+            <div className="size-9 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+            <p className="text-sm font-semibold text-navy">Checking permissions...</p>
+          </div>
+        </main>
       </div>
     );
   }
 
   if (!hasPermission) return null;
 
+  const totalPages = Math.ceil(packageDescriptions.length / packageDescriptionsPerPage);
+  const startIndex = (currentPackageDescriptionPage - 1) * packageDescriptionsPerPage;
+  const endIndex = startIndex + packageDescriptionsPerPage;
+  const paged = packageDescriptions.slice(startIndex, endIndex);
+
   return (
-    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+    <div className="flex min-h-screen bg-[#f8f9fc]">
       <Sidebar />
-
-      <main className="flex-1 lg:ml-72 p-4 md:p-8 pt-24 lg:pt-10 transition-all">
-        
-        {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start mb-8 gap-4">
-          <h1 className="text-3xl md:text-4xl font-bold text-[#0c244c]">
-            Add Package Description
-          </h1>
-          <div className="bg-white px-6 py-2 rounded-lg shadow-sm border border-gray-100 text-sm font-medium text-gray-500">
-            {new Date().toLocaleDateString('en-US')}
+      <main className="min-h-screen flex-1 min-w-0 px-4 pb-16 pt-20 lg:ml-72 lg:px-8 lg:pt-10">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="animate-rise">
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">Package Description Management</h1>
           </div>
-        </header>
+          <div>
+            <button onClick={() => nav.goToAddPackage()} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] transition-all">
+              <ArrowLeft className="size-4" /> Back to Hub
+            </button>
+          </div>
+        </div>
 
-        <hr className="border-gray-200 mb-10" />
-
-        <div className="max-w-5xl mx-auto">
-          {success && createdDescription ? (
-            <section className="bg-white p-8 rounded-lg shadow-md">
-              <div className="text-center">
-                <div className="mb-6">
-                  <div className="inline-block p-4 bg-green-100 rounded-full">
-                    <svg className="w-12 h-12 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
+        <div className="mt-7 flex flex-col gap-6 w-full">
+          <section className="surface-card p-6 animate-rise">
+            <h2 className="text-base font-bold text-navy">Add Package Description</h2>
+            {success && createdDescription && (
+              <div className="mt-5 space-y-4">
+                <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success animate-rise">
+                  <span>Added successfully.</span>
                 </div>
-                <h2 className="text-2xl font-bold text-green-600 mb-2">Success</h2>
-                <p className="text-gray-600 mb-4">
-                  Package description has been added successfully!
-                </p>
-                <p className="text-sm text-gray-500 mb-2">
-                  <strong>Description:</strong> {createdDescription.packageDescription}
-                </p>
-              </div>
-
-              <div className="flex gap-4 justify-center pt-6 border-t border-gray-200">
-                <button
-                  onClick={handleCreateAnother}
-                  className="px-8 py-3 bg-[#3ea5d9] hover:bg-[#2d8ab8] text-white font-bold rounded-lg transition-all shadow-md active:scale-[0.98]"
-                >
-                  Add Another Description
-                </button>
-
-                <button
-                  onClick={() => {
-                    nav.goToAddPackage();
-                  }}
-                  className="px-8 py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-lg transition-all"
-                >
-                  Back to Add Package
-                </button>
-              </div>
-            </section>
-          ) : (
-            <section className="bg-white p-8 rounded-lg shadow-md">
-              
-              {error && (
-                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-                  <p className="text-red-700 font-medium">{error}</p>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
-                    Package Description *
-                  </label>
-                  <textarea
-                    rows={8}
-                    value={packageData.packageDescription}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3ea5d9] resize-y"
-                    placeholder="Describe the package (e.g., documents, electronics, fragile items, weight, dimensions, etc.)"
-                  />
-                </div>
-
-                <div className="flex gap-4 justify-start pt-6 border-t border-gray-200">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-8 py-3 bg-[#3ea5d9] hover:bg-[#2d8ab8] disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all shadow-md active:scale-[0.98]"
-                  >
-                    {loading ? "Submitting..." : "Submit Package Info"}
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={handleCreateAnother} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 active:scale-[0.97]">
+                    <Plus className="size-4" /> Add Another
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      nav.goToAddPackage();
-                    }}
-                    disabled={loading}
-                    className="px-8 py-3 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all"
-                  >
-                    Cancel
+                  <button onClick={() => nav.goToAddPackage()} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97]">
+                    <ArrowLeft className="size-4" /> Back to Hub
+                  </button>
+                </div>
+              </div>
+            )}
+            {!success && (
+              <form onSubmit={handleSubmit} className="mt-5 space-y-5">
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Package Description</label>
+                  <textarea value={packageData.packageDescription} onChange={handleChange} rows={4} className="w-full resize-y rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" />
+                  {error && <p className="flex items-center gap-1 text-[12px] font-medium text-destructive animate-rise"><AlertTriangle className="size-3.5" /> {error}</p>}
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button type="submit" disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold h-11 px-6 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none">
+                    {loading ? <><Loader2 className="size-4 animate-spin" /> Adding...</> : 'Add Description'}
                   </button>
                 </div>
               </form>
-            </section>
-          )}
+            )}
+          </section>
 
-          {renderPackageDescriptionList()}
+          <section className="surface-card overflow-hidden animate-rise">
+            <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input value={packageDescriptionSearchQuery} onChange={(e) => setPackageDescriptionSearchQuery(e.target.value)} placeholder="Search..." className="h-11 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-sm text-navy placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handlePackageDescriptionSearch} disabled={packageDescriptionsLoading} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 sm:h-9 px-4 sm:px-3 text-[13px] bg-gradient-brand text-white active:scale-[0.97] disabled:opacity-45">Search</button>
+                <button onClick={() => void handlePackageDescriptionSearchClear()} disabled={packageDescriptionsLoading || (!packageDescriptionSearchQuery && !activePackageDescriptionSearch)} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 sm:h-9 px-4 sm:px-3 text-[13px] bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] disabled:opacity-45"><X className="size-4" /> Clear</button>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left table-fixed">
+                <thead>
+                  <tr className="bg-secondary/70">
+                    <th className="w-auto px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Description</th>
+                    <th className="w-36 sm:w-44 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Created Date</th>
+                    <th className="w-20 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground text-right">Delete</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {paged.map(item => (
+                    <tr key={item.id} className="transition-colors hover:bg-secondary/60">
+                      <td className="px-5 py-3.5 text-sm font-semibold text-navy break-words break-all whitespace-pre-wrap">{item.packageDescription}</td>
+                      <td className="px-5 py-3.5 text-[13px] text-muted-foreground whitespace-nowrap">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-US") : "-"}</td>
+                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                        <button onClick={() => void handleDeletePackageDescription(item)} className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive active:scale-95" aria-label="Delete">
+                          <Trash2 className="size-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {packageDescriptionsLoading && paged.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-5 py-8 text-center text-sm text-muted-foreground">Loading...</td>
+                    </tr>
+                  )}
+                  {!packageDescriptionsLoading && paged.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-5 py-8 text-center text-sm text-muted-foreground">No records found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {packageDescriptions.length > 0 && totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-5 py-3">
+                <p className="text-[13px] text-muted-foreground">
+                  Showing <span className="font-medium text-navy">{startIndex + 1}</span> to <span className="font-medium text-navy">{Math.min(endIndex, packageDescriptions.length)}</span> of <span className="font-medium text-navy">{packageDescriptions.length}</span>
+                </p>
+                <div className="flex gap-1">
+                  <button onClick={() => setCurrentPackageDescriptionPage(p => Math.max(p - 1, 1))} disabled={currentPackageDescriptionPage === 1} className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-card px-3 text-[13px] font-medium text-navy transition-all hover:bg-accent disabled:pointer-events-none disabled:opacity-50">Prev</button>
+                  <button onClick={() => setCurrentPackageDescriptionPage(p => Math.min(p + 1, totalPages))} disabled={currentPackageDescriptionPage === totalPages} className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-card px-3 text-[13px] font-medium text-navy transition-all hover:bg-accent disabled:pointer-events-none disabled:opacity-50">Next</button>
+                </div>
+              </div>
+            )}
+          </section>
         </div>
 
-        <DeleteConfirmModal
-          isOpen={packageDescriptionToDelete !== null}
-          title="Remove Package Description"
-          message={
-            packageDescriptionToDelete
-              ? `Remove this package description from the list?`
-              : "Remove this package description from the list?"
-          }
-          confirmText="Remove"
-          onCancel={() => setPackageDescriptionToDelete(null)}
-          onConfirm={() => void confirmDeletePackageDescription()}
-          isSubmitting={deletingPackageDescriptionId !== null}
-        />
+        {packageDescriptionToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-navy/45 backdrop-blur-[2px]" onClick={() => setPackageDescriptionToDelete(null)} />
+            <div className="surface-card relative z-10 w-full max-w-md p-6 animate-rise">
+              <div className="grid size-12 place-items-center rounded-xl bg-destructive/10 text-destructive">
+                <AlertTriangle className="size-6" />
+              </div>
+              <h3 className="mt-4 text-lg font-bold text-navy">Delete record</h3>
+              <p className="mt-1.5 text-sm text-muted-foreground">Are you sure you want to delete this description? This action cannot be undone.</p>
+              <div className="mt-6 flex justify-end gap-2">
+                <button onClick={() => setPackageDescriptionToDelete(null)} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent">Cancel</button>
+                <button onClick={() => void confirmDeletePackageDescription()} disabled={!!deletingPackageDescriptionId} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-destructive text-white hover:brightness-110 disabled:opacity-45">
+                  {deletingPackageDescriptionId ? <><Loader2 className="size-4 animate-spin" /> Deleting...</> : 'Confirm Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -14,7 +14,7 @@ import {
   Globe,
   Clock,
   Search,
-  Timer,
+  UserRound,
 } from "lucide-react";
 
 interface LoginSession {
@@ -77,15 +77,15 @@ function getInitials(name?: string, username?: string) {
 function getRoleBadgeStyle(role?: string) {
   switch (role?.toLowerCase()) {
     case "superadmin":
-      return "bg-purple-100 text-purple-800 border-purple-200";
+      return "bg-role-super/12 text-role-super ring-1 ring-inset ring-role-super/25";
     case "admin":
-      return "bg-blue-100 text-blue-800 border-blue-200";
+      return "bg-role-admin/12 text-role-admin ring-1 ring-inset ring-role-admin/25";
     case "guard":
-      return "bg-emerald-100 text-emerald-800 border-emerald-200";
+      return "bg-role-guard/14 text-role-guard ring-1 ring-inset ring-role-guard/25";
     case "employee":
-      return "bg-amber-100 text-amber-800 border-amber-200";
+      return "bg-role-employee/12 text-role-employee ring-1 ring-inset ring-role-employee/25";
     default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return "bg-secondary text-muted-foreground ring-1 ring-inset ring-border";
   }
 }
 
@@ -158,89 +158,87 @@ export default function LoginMonitorPage() {
 
   return (
     <PermissionGuard permission="loginMonitor">
-      <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+      <div className="flex min-h-screen bg-[#f8f9fc]">
         <Sidebar />
-        <main className="flex-1 lg:ml-72 p-4 md:p-8 pt-24 lg:pt-10 transition-all">
+        <main className="min-h-screen flex-1 min-w-0 px-4 pb-16 pt-20 lg:ml-72 lg:px-8 lg:pt-10">
           {/* Header */}
-          <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between animate-rise">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-[#0c244c] flex items-center gap-3">
+              <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">
                 Login Monitor
               </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Track active sessions, IP addresses, and user activity in real time.
-              </p>
+
             </div>
-            <div className="flex items-center gap-4 w-full xl:w-auto justify-between xl:justify-end">
-              <div className="hidden md:block">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="hidden sm:block">
                 <DateTime />
               </div>
               <button
                 onClick={() => void fetchSessions()}
                 disabled={loading}
-                className="flex items-center gap-2 bg-[#0084c8] hover:bg-[#0071ad] text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 disabled:pointer-events-none disabled:opacity-45"
               >
-                <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-                Refresh
+                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                <span>Refresh</span>
               </button>
             </div>
-          </header>
+          </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-                <Wifi className="text-green-600" size={24} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-7 animate-rise">
+            <div className="surface-card p-5 flex items-center gap-4">
+              <div className="size-12 rounded-2xl bg-success/12 text-success flex items-center justify-center shrink-0">
+                <Wifi size={22} />
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Active Sessions</p>
-                <p className="text-3xl font-black text-green-600">{activeCount}</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Active Sessions</p>
+                <p className="text-2xl font-extrabold text-navy">{activeCount}</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
-                <WifiOff className="text-gray-400" size={24} />
+            <div className="surface-card p-5 flex items-center gap-4">
+              <div className="size-12 rounded-2xl bg-secondary text-muted-foreground flex items-center justify-center shrink-0">
+                <WifiOff size={22} />
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Ended Sessions</p>
-                <p className="text-3xl font-black text-gray-600">{totalCount - activeCount}</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Ended Sessions</p>
+                <p className="text-2xl font-extrabold text-navy">{totalCount - activeCount}</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                <Shield className="text-[#0084c8]" size={24} />
+            <div className="surface-card p-5 flex items-center gap-4">
+              <div className="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Shield size={22} />
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Total Logins</p>
-                <p className="text-3xl font-black text-[#0c244c]">{totalCount}</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total Logins</p>
+                <p className="text-2xl font-extrabold text-navy">{totalCount}</p>
               </div>
             </div>
           </div>
 
           {/* Filter & Search Bar */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="surface-card p-4 mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-rise">
             <div className="relative flex-1 w-full sm:max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search by username, name, IP, or role…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0084c8] text-sm transition-all"
+                className="h-11 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-sm text-navy placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
               />
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             </div>
 
-            <div className="flex gap-2 w-full sm:w-auto">
+            <div className="flex gap-1 p-1 bg-secondary/80 rounded-xl border border-border w-full sm:w-auto">
               {(["all", "active", "ended"] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilterActive(f)}
-                  className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-sm font-bold capitalize transition-all ${
+                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
                     filterActive === f
-                      ? "bg-[#0c244c] text-white shadow-sm"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      ? "bg-white text-navy shadow-sm"
+                      : "text-muted-foreground hover:text-navy"
                   }`}
                 >
                   {f}
@@ -249,118 +247,124 @@ export default function LoginMonitorPage() {
             </div>
           </div>
 
-          {/* Sessions Table */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[#0c244c]">Login Sessions</h2>
-              <span className="text-sm font-medium text-gray-500">
-                {loading ? "Loading…" : `Showing ${paginatedSessions.length} of ${filteredSessions.length} records`}
+          {/* Sessions Table Card */}
+          <section className="surface-card overflow-hidden mt-6 animate-rise">
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <h2 className="text-base font-bold text-navy">Login Sessions</h2>
+              <span className="text-[13px] text-muted-foreground">
+                {loading ? "Loading…" : (
+                  <>Showing <span className="font-bold text-navy">{paginatedSessions.length}</span> of <span className="font-bold text-navy">{filteredSessions.length}</span> records</>
+                )}
               </span>
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#0084c8]" />
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <div className="size-9 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+                <p className="text-sm font-semibold text-navy">Loading sessions...</p>
               </div>
             ) : paginatedSessions.length === 0 ? (
-              <div className="py-16 text-center text-gray-400 font-medium">
-                No sessions found matching your filter criteria.
+              <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+                <div className="grid size-14 place-items-center rounded-2xl bg-secondary text-muted-foreground">
+                  <UserRound className="size-7" />
+                </div>
+                <h3 className="text-base font-bold text-navy">No sessions found</h3>
+                <p className="max-w-sm text-sm text-muted-foreground">No records match the current filter and search criteria.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-100">
-                  <thead className="bg-gray-50">
-                    <tr className="text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                      <th className="px-6 py-3.5">Status</th>
-                      <th className="px-6 py-3.5">User</th>
-                      <th className="px-6 py-3.5">Role</th>
-                      <th className="px-6 py-3.5">
-                        <div className="flex items-center gap-1.5"><Globe size={14} /> IP Address</div>
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-secondary/70">
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">User</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Role</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <div className="flex items-center gap-1.5"><Globe size={13} /> IP Address</div>
                       </th>
-                      <th className="px-6 py-3.5">Browser / OS</th>
-                      <th className="px-6 py-3.5">
-                        <div className="flex items-center gap-1.5"><Clock size={14} /> Login Time</div>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Browser / OS</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <div className="flex items-center gap-1.5"><Clock size={13} /> Login Time</div>
                       </th>
-                      <th className="px-6 py-3.5">Logout Time</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Logout Time</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-border">
                     {paginatedSessions.map((session) => (
                       <tr
                         key={session.id}
-                        className={`transition-colors ${
-                          session.isActive ? "hover:bg-green-50/20" : "hover:bg-gray-50/80 opacity-80"
+                        className={`transition-colors hover:bg-secondary/50 ${
+                          session.isActive ? "bg-success/[0.02]" : ""
                         }`}
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5">
                           {session.sessionStatus === "active" ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-success/12 text-success ring-1 ring-inset ring-success/25 text-[11px] font-bold">
+                              <span className="size-1.5 rounded-full bg-success animate-pulse inline-block" />
                               Active
                             </span>
                           ) : session.sessionStatus === "expired" ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-bold">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/12 text-amber-600 ring-1 ring-inset ring-amber-500/25 text-[11px] font-bold">
                               Expired
                             </span>
                           ) : session.sessionStatus === "revoked" ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-bold">
-                              <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-destructive/12 text-destructive ring-1 ring-inset ring-destructive/25 text-[11px] font-bold">
+                              <span className="size-1.5 rounded-full bg-destructive inline-block" />
                               Revoked
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-xs font-bold">
-                              <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-secondary text-muted-foreground ring-1 ring-inset ring-border text-[11px] font-bold">
                               Ended
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-[#0084c8] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs">
+                            <div className="size-8 rounded-xl bg-gradient-navy text-white text-[11px] font-bold flex items-center justify-center shrink-0 shadow-xs">
                               {getInitials(session.fullName, session.username)}
                             </div>
                             <div>
-                              <p className="font-bold text-sm text-[#0c244c]">{session.fullName}</p>
-                              <p className="text-xs text-gray-400">@{session.username}</p>
+                              <p className="font-bold text-sm text-navy">{session.fullName}</p>
+                              <p className="text-xs text-muted-foreground font-mono">@{session.username}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getRoleBadgeStyle(
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide ${getRoleBadgeStyle(
                               session.role
                             )}`}
                           >
                             {session.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="font-mono text-xs font-semibold text-gray-700 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200">
+                        <td className="px-5 py-3.5">
+                          <span className="font-mono text-xs font-semibold text-navy bg-secondary/80 px-2 py-1 rounded-md border border-border">
                             {session.ipAddress}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
-                          <div className="font-medium text-gray-800">{parseUserAgent(session.userAgent)}</div>
-                          <div className="text-xs text-gray-400">{parseOS(session.userAgent)}</div>
+                        <td className="px-5 py-3.5 text-sm">
+                          <div className="font-medium text-navy">{parseUserAgent(session.userAgent)}</div>
+                          <div className="text-xs text-muted-foreground">{parseOS(session.userAgent)}</div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                        <td className="px-5 py-3.5 text-[13px] text-muted-foreground whitespace-nowrap">
                           {formatDateTime(session.loginAt)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                        <td className="px-5 py-3.5 text-[13px] text-muted-foreground whitespace-nowrap">
                           {session.logoutAt ? (
                             formatDateTime(session.logoutAt)
                           ) : session.sessionStatus === "expired" ? (
-                            <span className="text-orange-500 font-bold text-xs bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200 inline-flex items-center gap-1">
-                               Session Expired
-                              {session.rememberMe && <span className="ml-1 text-[10px] text-orange-400">(30d)</span>}
+                            <span className="text-amber-600 font-semibold text-xs inline-flex items-center gap-1">
+                              Session Expired
+                              {session.rememberMe && <span className="text-[10px] text-amber-500">(30d)</span>}
                             </span>
                           ) : session.sessionStatus === "active" ? (
-                            <span className="text-green-600 font-bold text-xs bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
+                            <span className="text-success font-semibold text-xs inline-flex items-center gap-1">
                               Still Active
-                              {session.rememberMe && <span className="ml-1 text-[10px] text-green-500">(30d)</span>}
+                              {session.rememberMe && <span className="text-[10px] text-success/80">(30d)</span>}
                             </span>
                           ) : (
-                            <span className="text-gray-400 text-xs">—</span>
+                            <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </td>
                       </tr>
@@ -369,18 +373,20 @@ export default function LoginMonitorPage() {
                 </table>
               </div>
             )}
-          </div>
 
-          {/* Pagination Controls */}
-          {!loading && totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              itemsShown={paginatedSessions.length}
-              onPageChange={(page) => setCurrentPage(page)}
-            />
-          )}
+            {/* Pagination Controls */}
+            {!loading && totalPages > 1 && (
+              <div className="border-t border-border">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsShown={paginatedSessions.length}
+                  onPageChange={(page) => setCurrentPage(page)}
+                />
+              </div>
+            )}
+          </section>
 
           <AlertModal
             isOpen={alertModal.isOpen}
@@ -394,3 +400,4 @@ export default function LoginMonitorPage() {
     </PermissionGuard>
   );
 }
+

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import AlertModal from "@/components/AlertModal";
-import { ChevronDown, UserPlus, Copy, Check } from "lucide-react";
+import { ChevronDown, UserPlus, Copy, Check, RotateCcw, ArrowLeft, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { useNavigation } from "@/hooks/useNavigation";
 import { fetchNextAccessId } from "@/utils/idSequenceClient";
 
@@ -217,11 +217,14 @@ export default function AccessManagementPage() {
 
   if (isCheckingPermissions) {
     return (
-      <div className="flex h-screen bg-[#f8f9fc]">
+      <div className="flex min-h-screen bg-[#f8f9fc]">
         <Sidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500">Checking permissions...</p>
-        </div>
+        <main className="min-h-screen flex-1 lg:ml-72 flex items-center justify-center p-6">
+          <div className="flex flex-col items-center gap-3 animate-rise">
+            <div className="size-9 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+            <p className="text-sm font-semibold text-navy">Checking permissions...</p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -229,74 +232,125 @@ export default function AccessManagementPage() {
   if (!canAddUsers) return null;
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+    <div className="flex min-h-screen bg-[#f8f9fc]">
       <Sidebar />
 
-      <main className="flex-1 lg:ml-72 p-4 md:p-10 pt-24 lg:pt-10 transition-all duration-300">
-        <header className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-[#0c244c]">User Management</h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Create login accounts for employees, guards, admins, and super admins.
-            </p>
+      <main className="min-h-screen flex-1 min-w-0 px-4 pb-16 pt-20 lg:ml-72 lg:px-8 lg:pt-10">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="animate-rise">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Access Control</p>
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">Add New User</h1>
           </div>
-        </header>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => nav.goToAllUsers()} className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent">
+              <ArrowLeft className="size-4" /> Back to Users List
+            </button>
+          </div>
+        </div>
 
-        <hr className="border-gray-300 mb-10" />
-
-        <form onSubmit={handleSubmit} className="max-w-7xl mx-auto space-y-12">
-          <section>
-            <h2 className="text-2xl font-semibold text-[#4a5568] mb-8">Account Information</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-10 gap-y-10">
+        {createdUser ? (
+          <div className="surface-card overflow-hidden animate-rise mt-7 w-full">
+            <div className="flex items-center gap-4 border-b border-border bg-success/8 px-6 py-6">
               <div>
-                <InputLabel label="Access ID" />
+                <h2 className="text-xl font-extrabold text-navy">User Created Successfully</h2>
+              </div>
+            </div>
+            <div className="space-y-4 p-6 sm:p-8">
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Access ID</label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    className="form-input-essilor flex-1"
-                    value={formData.accessId}
-                    readOnly
-                    disabled
-                    placeholder="Generated on save"
-                  />
+                  <div className="flex h-11 flex-1 items-center rounded-lg border border-dashed border-primary/40 bg-primary/6 px-3 font-mono text-sm font-bold tracking-wide text-navy">
+                    {createdUser.accessId}
+                  </div>
                   <button
                     type="button"
-                    onClick={copyAccessIdToClipboard}
-                    className="p-2.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors shrink-0"
-                    title="Copy Access ID"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdUser.accessId);
+                      setCopiedAccessId(true);
+                      setTimeout(() => setCopiedAccessId(false), 2000);
+                    }}
+                    className="grid size-11 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition-all hover:border-primary/50 hover:text-primary active:scale-95"
+                    aria-label="Copy access ID"
                   >
-                    {copiedAccessId ? <Check size={20} /> : <Copy size={20} />}
+                    {copiedAccessId ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
                   </button>
                 </div>
               </div>
+              <dl className="grid gap-px overflow-hidden rounded-xl bg-border sm:grid-cols-2">
+                {[
+                  ['Username', createdUser?.username], 
+                  ['Full Name', createdUser?.fullName], 
+                  ['Department', createdUser?.department ?? '-'], 
+                  ['Company', createdUser?.company ?? '-']
+                ].map(([k, v]) => (
+                  <div key={k} className="bg-card px-4 py-3">
+                    <dt className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{k}</dt>
+                    <dd className="mt-0.5 text-sm font-semibold text-navy">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <button type="button" onClick={() => { setCreatedUser(null); resetForm(); void loadAccessId("guard"); }} className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110">
+                  <UserPlus className="size-4" /> Add Another User
+                </button>
+                <button type="button" onClick={() => nav.goToAllUsers()} className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97]">
+                  View Users List
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="surface-card space-y-5 p-6 sm:p-8 animate-rise mt-7 w-full">
+            {alertModal.isOpen && alertModal.type === 'error' && (
+              <div className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive animate-rise mb-4">
+                <AlertTriangle className="size-5 shrink-0" />
+                <span className="flex-1">{alertModal.message}</span>
+              </div>
+            )}
+            
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Access ID</label>
+              <div className="flex items-center gap-2">
+                <div className="flex h-11 flex-1 items-center rounded-lg border border-dashed border-primary/40 bg-primary/6 px-3 font-mono text-sm font-bold tracking-wide text-navy">
+                  {formData.accessId}
+                </div>
+                <button
+                  type="button"
+                  onClick={copyAccessIdToClipboard}
+                  className="grid size-11 place-items-center rounded-lg border border-border bg-card text-muted-foreground transition-all hover:border-primary/50 hover:text-primary active:scale-95"
+                  aria-label="Copy access ID"
+                >
+                  {copiedAccessId ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
+                </button>
+              </div>
+            </div>
 
-              <div>
-                <InputLabel label="Username" />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Username *</label>
                 <input
                   type="text"
-                  className="form-input-essilor"
+                  className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                   value={formData.username}
                   onChange={(e) => handleInputChange(e, "username")}
                   autoComplete="username"
                 />
               </div>
-
-              <div>
-                <InputLabel label="Full Name" />
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Full Name *</label>
                 <input
                   type="text"
-                  className="form-input-essilor"
+                  className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                   value={formData.fullName}
                   onChange={(e) => handleInputChange(e, "fullName")}
                 />
               </div>
 
-              <div className="relative">
-                <InputLabel label="Role" />
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Role *</label>
                 <div className="relative">
                   <select
-                    className="form-input-essilor appearance-none cursor-pointer pr-10"
+                    className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm font-medium text-navy transition-all hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 appearance-none cursor-pointer pr-10"
                     value={formData.role}
                     onChange={(e) => handleInputChange(e, "role")}
                   >
@@ -306,131 +360,69 @@ export default function AccessManagementPage() {
                     <option value="superAdmin">Super Admin</option>
                   </select>
                   <ChevronDown
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                    size={20}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none size-4"
                   />
                 </div>
               </div>
 
-              <div>
-                <InputLabel label="Department" />
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Department</label>
                 <input
                   type="text"
-                  className="form-input-essilor"
+                  className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                   value={formData.department}
                   onChange={(e) => handleInputChange(e, "department")}
                 />
               </div>
 
-              <div>
-                <InputLabel label="Company" />
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Company</label>
                 <input
                   type="text"
-                  className="form-input-essilor"
+                  className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                   value={formData.company}
                   onChange={(e) => handleInputChange(e, "company")}
                 />
               </div>
+              <div className="hidden sm:block"></div>
 
-              <div>
-                <InputLabel label="Password" />
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Password *</label>
                 <input
                   type="password"
-                  className="form-input-essilor"
+                  className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                   value={formData.password}
                   onChange={(e) => handleInputChange(e, "password")}
                   autoComplete="new-password"
                 />
-                <p className="mt-1.5 text-xs font-medium text-gray-500">
-                  Must be at least 6 characters and include at least one special character (e.g. @, #, $, !).
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  Min 6 chars, 1 special char (@, #, $, !).
                 </p>
               </div>
 
-              <div>
-                <InputLabel label="Confirm Password" />
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Confirm Password *</label>
                 <input
                   type="password"
-                  className="form-input-essilor"
+                  className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange(e, "confirmPassword")}
                   autoComplete="new-password"
                 />
               </div>
             </div>
-          </section>
 
-          <div className="flex flex-col md:flex-row justify-end gap-3 pt-12 pb-10">
-            <button
-              type="button"
-              onClick={() => nav.goToAllUsers()}
-              className="w-full md:w-56 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3.5 rounded-xl transition-all active:scale-95 text-lg"
-            >
-              View Users
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !canAddUsers}
-              className="w-full md:w-64 bg-[#0084c8] hover:bg-[#0071ad] disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 text-lg inline-flex items-center justify-center gap-2"
-            >
-              <UserPlus size={20} />
-              {isSubmitting ? "Creating..." : "Create User"}
-            </button>
-          </div>
-        </form>
-
-        {createdUser && (
-          <section className="mt-10 max-w-4xl mx-auto bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
-            <h2 className="text-2xl font-bold text-[#0c244c] mb-2">Created User</h2>
-            <p className="text-sm text-gray-500 mb-6">The new account has been saved to the Users table.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-              <DetailRow label="Access ID" value={createdUser.accessId} />
-              <DetailRow label="Username" value={createdUser.username} />
-              <DetailRow label="Full Name" value={createdUser.fullName} />
-              <DetailRow label="Role" value={createdUser.role} />
-              <DetailRow label="Department" value={createdUser.department || "-"} />
-              <DetailRow label="Company" value={createdUser.company || "-"} />
-              <DetailRow label="User ID" value={String(createdUser.id)} />
-            </div>
-            <div className="mt-8 flex flex-col md:flex-row gap-3">
-              <button
-                type="button"
-                onClick={() => setCreatedUser(null)}
-                className="px-5 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 font-bold text-gray-800"
-              >
-                Create Another
+            <div className="flex flex-wrap gap-2 border-t border-border pt-5 mt-2">
+              <button type="submit" disabled={isSubmitting || !canAddUsers} className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 disabled:pointer-events-none disabled:opacity-45">
+                {isSubmitting ? <><Loader2 className="size-4 animate-spin" /> Creating...</> : <><UserPlus className="size-4" /> Create User</>}
               </button>
-              <button
-                type="button"
-                onClick={() => nav.goToAllUsers()}
-                className="px-5 py-3 rounded-xl bg-[#3ea5d9] hover:bg-[#2d8ab8] font-bold text-white"
-              >
-                Open Users List
+              <button type="button" onClick={resetForm} disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none">
+                <RotateCcw className="size-4" /> Reset Form
               </button>
             </div>
-          </section>
+          </form>
         )}
       </main>
-
-      <style jsx>{`
-        .form-input-essilor {
-          width: 100%;
-          padding: 0.85rem 1.25rem;
-          background-color: #f1f3f5;
-          border: 1px solid #ced4da;
-          border-radius: 0.75rem;
-          outline: none;
-          font-size: 1.125rem;
-          font-weight: 500;
-          color: #495057;
-          transition: all 0.2s ease;
-        }
-
-        .form-input-essilor:focus {
-          background-color: #fff;
-          border-color: #0084c8;
-          box-shadow: 0 0 0 4px rgba(0, 132, 200, 0.1);
-        }
-      `}</style>
 
       <AlertModal
         isOpen={alertModal.isOpen}
@@ -439,19 +431,6 @@ export default function AccessManagementPage() {
         message={alertModal.message}
         type={alertModal.type}
       />
-    </div>
-  );
-}
-
-function InputLabel({ label }: { label: string }) {
-  return <label className="block text-xl font-medium text-[#2d3748] mb-3 ml-1">{label}</label>;
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-gray-50 border border-gray-100 px-4 py-3">
-      <div className="text-xs uppercase tracking-wider text-gray-400 font-bold">{label}</div>
-      <div className="mt-1 font-semibold text-[#0c244c]">{value}</div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
-import { Plus, Search, UserRound, ShieldCheck, Building2, BadgeInfo, Package, Settings2 } from "lucide-react";
+import { Plus, Search, UserRound, ShieldCheck, Building2, BadgeInfo, Package, Settings2, Users, AlertTriangle } from "lucide-react";
 import { useNavigation } from "@/hooks/useNavigation";
 import Pagination, { usePagination } from "@/components/Pagination";
 
@@ -128,117 +128,136 @@ export default function AccessControlListPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+    <div className="flex min-h-screen bg-[#f8f9fc]">
       <Sidebar />
 
-      <main className="flex-1 lg:ml-72 p-4 md:p-8 pt-24 lg:pt-10 transition-all">
-        <header className="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-4 gap-6">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-[#0c244c]">Access Control Management</h1>
+      <main className="min-h-screen flex-1 min-w-0 px-4 pb-16 pt-20 lg:ml-72 lg:px-8 lg:pt-10">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="animate-rise">
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">Access Control Management</h1>
           </div>
-
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row items-center gap-4 w-full xl:w-auto">
-            <div className="relative w-full sm:w-72">
-              <input
-                type="text"
-                placeholder="Search username, name, or role"
-                className="w-full pl-4 pr-10 py-2 bg-white border border-gray-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            </div>
+          <div className="flex flex-wrap gap-2">
             <button
-              type="submit"
-              className="flex items-center gap-2 bg-[#3ea5d9] hover:bg-[#3494c7] text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95"
+              onClick={() => nav.goToAddPackage()}
+              disabled={!viewerPermissions.addOngoingPackage && !viewerPermissions.addIncomePackage}
+              className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent disabled:pointer-events-none disabled:opacity-45"
             >
-              Search
+              <Package size={16} />
+              <span>Add Details</span>
             </button>
-          </form>
-        </header>
-
-        <hr className="border-gray-200 mb-6" />
-
-        <div className="flex justify-end gap-3 mb-6">
-          <button
-            onClick={() => nav.goToAddPackage()}
-            disabled={!viewerPermissions.addOngoingPackage && !viewerPermissions.addIncomePackage}
-            className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-[#0c244c] px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95"
-          >
-            <Package size={20} />
-          <span className="text-sm">Add Details</span>
-          </button>
-          <button
-            onClick={() => nav.goToOverdueSettings()}
-            disabled={!viewerPermissions.overdueEmployeeAlert && !viewerPermissions.accessManagementControl}
-            className="flex items-center gap-2  bg-white border border-gray-200 hover:bg-gray-50 disabled:cursor-not-allowed  text-[#0c244c] px-5 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-"
-          >
-            <Settings2 size={20} />
-            <span className="text-sm">Overdue Settings</span>
-          </button>
-          <button
-            onClick={() => nav.goToAddUser()}
-            disabled={!viewerPermissions.accessManagementAdd}
-            className="flex items-center gap-2 bg-[#3ea5d9] hover:bg-[#3494c7] text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95"
-          >
-            <Plus size={24} />
-            <span className="text-lg">Add New User</span>
-          </button>
-          <button
-            onClick={() => nav.goToAddGuard()}
-            disabled={!viewerPermissions.guardManagementAdd}
-            className="flex items-center gap-2 bg-[#3ea5d9] hover:bg-[#3494c7] text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95"
-          >
-          <span className="text-lg">Guards & Barcodes</span>
-          </button>
+            <button
+              onClick={() => nav.goToOverdueSettings()}
+              disabled={!viewerPermissions.overdueEmployeeAlert && !viewerPermissions.accessManagementControl}
+              className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent disabled:pointer-events-none disabled:opacity-45"
+            >
+              <Settings2 size={16} />
+              <span>Overdue Settings</span>
+            </button>
+            <button
+              onClick={() => nav.goToAddGuard()}
+              disabled={!viewerPermissions.guardManagementAdd}
+              className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent disabled:pointer-events-none disabled:opacity-45"
+            >
+              <span>Guards & Barcodes</span>
+            </button>
+            <button
+              onClick={() => nav.goToAddUser()}
+              disabled={!viewerPermissions.accessManagementAdd}
+              className="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 hover:shadow-lift disabled:pointer-events-none disabled:opacity-45"
+            >
+              <Plus size={16} />
+              <span>Add New User</span>
+            </button>
+          </div>
         </div>
 
         {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 font-medium">
-            {error}
+          <div className="mt-6 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3.5 text-sm font-medium text-destructive animate-rise">
+            <AlertTriangle className="size-5 shrink-0" />
+            <span className="flex-1 font-semibold">{error}</span>
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(340px,0.9fr)] gap-6 items-start">
-          <section className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[#0c244c]">Users</h2>
-              <span className="text-sm text-gray-500">{loading ? "Loading..." : `${users.length} records`}</span>
+        <div className="mt-7 grid gap-6 2xl:grid-cols-[minmax(0,1fr)_380px]">
+          <section className="surface-card overflow-hidden">
+            <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
+              <form onSubmit={handleSearch} className="relative w-full sm:max-w-sm">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search username, name, or role"
+                  className="pl-9 h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button type="submit" className="hidden" />
+              </form>
+              <p className="text-[13px] text-muted-foreground">
+                <span className="font-bold text-navy">{users.length}</span> accounts
+              </p>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-100">
-                <thead className="bg-gray-50">
-                  <tr className="text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                    <th className="px-4 py-3">Access ID</th>
-                    <th className="px-4 py-3">Full Name</th>
-                    <th className="px-4 py-3">Username</th>
-                    <th className="px-4 py-3">Role</th>
-                    <th className="px-4 py-3">Created</th>
+              <table className="min-w-full text-left">
+                <thead>
+                  <tr className="bg-secondary/70">
+                    {["Access ID", "Full Name", "Username", "Role", "Created"].map((h) => (
+                      <th key={h} className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{h}</th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {!loading && paginatedUsers.length === 0 ? (
+                <tbody className="divide-y divide-border">
+                  {loading ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-10 text-center text-gray-500">
-                        No users found.
+                      <td colSpan={5} className="p-0">
+                        <div className="divide-y divide-border w-full">
+                          {Array.from({ length: 8 }).map((_, r) => (
+                            <div key={r} className="grid gap-4 px-5 py-4" style={{ gridTemplateColumns: 'repeat(5, minmax(0,1fr))' }}>
+                              {Array.from({ length: 5 }).map((_, c) => (
+                                <div key={c} className="h-3.5 animate-pulse rounded-full bg-secondary" style={{ width: `${55 + ((r * 7 + c * 13) % 40)}%` }} />
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : paginatedUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-0">
+                        <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center animate-rise">
+                          <div className="grid size-14 place-items-center rounded-2xl bg-secondary text-muted-foreground">
+                            <UserRound className="size-7" />
+                          </div>
+                          <h3 className="text-base font-bold text-navy">No users found</h3>
+                          <p className="max-w-sm text-sm text-muted-foreground">Try a different search term or create a new access account.</p>
+                        </div>
                       </td>
                     </tr>
                   ) : (
                     paginatedUsers.map((user) => (
                       <tr
                         key={user.id}
-                        className={`cursor-pointer transition-colors ${
-                          selectedUser?.id === user.id ? "bg-blue-50" : "hover:bg-gray-50"
-                        }`}
                         onClick={() => setSelectedUser(user)}
+                        className={`cursor-pointer transition-colors duration-150 ${
+                          selectedUser?.id === user.id ? 'bg-primary/8' : 'hover:bg-secondary/60'
+                        }`}
                       >
-                        <td className="px-4 py-4 font-mono text-sm font-semibold text-blue-600">{user.accessId}</td>
-                        <td className="px-4 py-4 text-sm font-medium text-gray-800">{user.fullName}</td>
-                        <td className="px-4 py-4 text-sm text-gray-700">{user.username}</td>
-                        <td className="px-4 py-4 text-sm text-gray-700">{user.role}</td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US") : "-"}
+                        <td className="relative px-5 py-3.5 font-mono text-[13px] font-semibold text-navy">
+                          {selectedUser?.id === user.id && <span className="absolute inset-y-0 left-0 w-1 rounded-r bg-primary" />}
+                          {user.accessId}
+                        </td>
+                        <td className="px-5 py-3.5 text-sm font-semibold text-navy">{user.fullName}</td>
+                        <td className="px-5 py-3.5 text-sm text-muted-foreground">{user.username}</td>
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide ring-1 ring-inset ${
+                            user.role === 'superAdmin' ? 'bg-role-super/12 text-role-super ring-role-super/25' :
+                            user.role === 'admin' ? 'bg-role-admin/12 text-role-admin ring-role-admin/25' :
+                            user.role === 'guard' ? 'bg-role-guard/14 text-role-guard ring-role-guard/25' :
+                            'bg-role-employee/12 text-role-employee ring-role-employee/25'
+                          }`}>{user.role}</span>
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] text-muted-foreground">
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US') : '-'}
                         </td>
                       </tr>
                     ))
@@ -247,7 +266,7 @@ export default function AccessControlListPage() {
               </table>
             </div>
 
-            <div className="px-6 pb-6">
+            <div className="border-t border-border">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -258,57 +277,59 @@ export default function AccessControlListPage() {
             </div>
           </section>
 
-          <aside className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sticky top-24">
-            <div className="flex items-center gap-3 mb-5">
-              <div>
-                <h2 className="text-lg font-bold text-[#0c244c]">Selected User</h2>
-                <p className="text-sm text-gray-500">Details for the highlighted account</p>
-              </div>
-            </div>
-
+          <aside className="2xl:sticky 2xl:top-8 2xl:self-start">
             {selectedUser ? (
-              <div className="space-y-4">
-                <DetailItem icon={BadgeInfo} label="Access ID" value={selectedUser.accessId} />
-                <DetailItem icon={UserRound} label="Full Name" value={selectedUser.fullName} />
-                <DetailItem icon={ShieldCheck} label="Username / Role" value={`${selectedUser.username} • ${selectedUser.role}`} />
-                <DetailItem icon={Building2} label="Department" value={selectedUser.department || "-"} />
-                <DetailItem icon={Building2} label="Company" value={selectedUser.company || "-"} />
-                <DetailItem icon={BadgeInfo} label="Status" value={selectedUser.isActive ? "Active" : "Inactive"} />
-                <div className="flex gap-3 pt-4">
+              <div className="surface-card overflow-hidden animate-rise">
+                <div className="bg-gradient-navy px-5 py-6 text-white">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Selected account</p>
+                  <h2 className="mt-1 text-xl font-extrabold">{selectedUser.fullName}</h2>
+                  <div className="mt-3 flex items-center gap-2">
+                    <code className="rounded-md bg-white/12 px-2 py-1 font-mono text-[13px]">{selectedUser.accessId}</code>
+                    <span className="rounded-md bg-white/12 px-2 py-1 text-[13px] font-medium">{selectedUser.role}</span>
+                  </div>
+                </div>
+                <dl className="divide-y divide-border">
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <dt className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Username</dt>
+                    <dd className="text-sm font-semibold text-navy">{selectedUser.username}</dd>
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <dt className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Department</dt>
+                    <dd className="text-sm font-semibold text-navy">{selectedUser.department || "-"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <dt className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Company</dt>
+                    <dd className="text-sm font-semibold text-navy">{selectedUser.company || "-"}</dd>
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-3.5">
+                    <dt className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Status</dt>
+                    <dd className="text-sm font-semibold text-navy">{selectedUser.isActive ? "Active" : "Inactive"}</dd>
+                  </div>
+                </dl>
+                <div className="p-5 pt-4 border-t border-border">
                   <button
                     disabled={!selectedUser?.id || !viewerPermissions.accessManagementEdit}
                     onClick={() => selectedUser && nav.goToEditUser(selectedUser.id)}
-                    className="flex-1 bg-[#0084c8] hover:bg-[#0071ad] disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-all duration-200 active:scale-[0.97] h-11 px-4 text-sm bg-gradient-brand text-white shadow-card hover:brightness-110 hover:shadow-lift disabled:pointer-events-none disabled:opacity-45"
                   >
                     Edit User
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center text-gray-500">
-                Select a user from the table to see details.
+              <div className="surface-card">
+                <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center animate-rise">
+                  <div className="grid size-14 place-items-center rounded-2xl bg-secondary text-muted-foreground">
+                    <Users className="size-7" />
+                  </div>
+                  <h3 className="text-base font-bold text-navy">No account selected</h3>
+                  <p className="max-w-sm text-sm text-muted-foreground">Select a row from the directory to inspect full account details.</p>
+                </div>
               </div>
             )}
           </aside>
         </div>
       </main>
-    </div>
-  );
-}
-function DetailItem({
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gray-400 font-bold">
-        {label}
-      </div>
-      <div className="mt-1 font-semibold text-[#0c244c] wrap-break-word">{value}</div>
     </div>
   );
 }

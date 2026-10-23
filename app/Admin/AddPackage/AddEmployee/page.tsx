@@ -104,6 +104,7 @@ export default function AddEmployeePage() {
 
       if (search.trim()) {
         params.set("search", search.trim());
+        params.set("scope", "all");
       }
 
       const response = await fetch(`/api/employees?${params.toString()}`);
@@ -472,7 +473,7 @@ export default function AddEmployeePage() {
                     type="text"
                     value={employeeSearchQuery}
                     onChange={(e) => setEmployeeSearchQuery(e.target.value)}
-                    placeholder="Search by Employee ID or name"
+                    placeholder="Search by ID, name, company or department"
                     className="h-11 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-sm text-navy placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                   />
                   {/* Hidden submit button to allow enter to submit form */}

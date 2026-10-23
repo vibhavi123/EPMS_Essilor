@@ -119,7 +119,15 @@ export async function GET(request: NextRequest) {
     const params: unknown[] = [];
 
     if (search) {
-      conditions.push("(EmployeeName LIKE ? OR EmployeeId LIKE ?)");
+      // scope=all → also match company & department (used by the admin Employee page).
+      // Default keeps name/ID only so the EmployeeSelector autocomplete is unaffected.
+      const searchAllFields = searchParams.get("scope") === "all";
+      conditions.push(
+        searchAllFields
+          ? "(EmployeeName LIKE ? OR EmployeeId LIKE ? OR EmployeeCompany LIKE ? OR Department LIKE ?)"
+          : "(EmployeeName LIKE ? OR EmployeeId LIKE ?)"
+      );
+      if (searchAllFields) params.push(`%${search}%`, `%${search}%`);
       params.push(`%${search}%`, `%${search}%`);
     }
 

@@ -1,6 +1,4 @@
--- Run this if IncomingPackages/OutgoingPackages were created without backticks
--- and CREATE TABLE failed on `Date` / `Time` / `Mode` columns.
--- Safe to re-run: skips columns that already exist with correct names.
+
 
 USE GuardSystemDB;
 

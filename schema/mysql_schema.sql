@@ -9,9 +9,9 @@ CREATE DATABASE IF NOT EXISTS GuardSystemDB
 
 USE GuardSystemDB;
 
--- =============================================================================
+-- =------------------------------------------
 -- 2. USERS TABLE-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS Users (
     Id           INT            NOT NULL AUTO_INCREMENT PRIMARY KEY,
     AccessId     VARCHAR(50)    NOT NULL,
@@ -32,9 +32,9 @@ CREATE TABLE IF NOT EXISTS Users (
 
 CREATE INDEX IX_Users_Username ON Users (Username);
 
--- =============================================================================
+-----------------------------------------------------
 -- 3. INCOMING PACKAGES-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS IncomingPackages (
     Id                      INT             NOT NULL AUTO_INCREMENT PRIMARY KEY,
 
@@ -87,12 +87,10 @@ CREATE INDEX IX_Incoming_ReferenceNumber     ON IncomingPackages (ReferenceNumbe
 CREATE INDEX IX_Incoming_CustomerName        ON IncomingPackages (CustomerName);
 CREATE INDEX IX_Incoming_VerificationStatus  ON IncomingPackages (VerificationStatus);
 
--- Trigger: auto-update UpdatedAt (MySQL handles this via ON UPDATE above, but explicit trigger for parity)
--- Note: The ON UPDATE CURRENT_TIMESTAMP(6) on UpdatedAt column already handles this automatically in MySQL.
 
--- =============================================================================
+-----------------------------------------------------------------------------
 -- 4. OUTGOING PACKAGES-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS OutgoingPackages (
     Id                      INT             NOT NULL AUTO_INCREMENT PRIMARY KEY,
 
@@ -145,9 +143,9 @@ CREATE TABLE IF NOT EXISTS OutgoingPackages (
 CREATE INDEX IX_Outgoing_ReferenceNumber     ON OutgoingPackages (ReferenceNumber);
 CREATE INDEX IX_Outgoing_VerificationStatus  ON OutgoingPackages (VerificationStatus);
 
--- =============================================================================
+--------------------------------------------------------------------------
 -- 5. GATE RECORDS-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS GateRecords (
     Id                    INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
 
@@ -185,9 +183,9 @@ CREATE INDEX IX_GateRecords_Type        ON GateRecords (Type);
 CREATE INDEX IX_GateRecords_PlateNumber ON GateRecords (PlateNumber);
 CREATE INDEX IX_GateRecords_GuardId     ON GateRecords (GuardId);
 
--- =============================================================================
+-- -----------------------------------------------------------
 -- 6. ACCESS IDS-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS AccessIds (
     Id        INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
     AccessId  VARCHAR(50)   NOT NULL,
@@ -206,18 +204,18 @@ CREATE TABLE IF NOT EXISTS AccessIds (
 CREATE INDEX IX_AccessIds_AccessId ON AccessIds (AccessId);
 CREATE INDEX IX_AccessIds_Username ON AccessIds (Username);
 
--- =============================================================================
+------------------------------------------------------------------
 -- 6.1 ID COUNTERS-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS IdCounters (
     CounterName  VARCHAR(100)  NOT NULL PRIMARY KEY,
     CounterValue INT           NOT NULL DEFAULT 0,
     UpdatedAt    DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 );
 
--- ==================================================
+--------------------------------------------------------------
 -- 7. EMPLOYEES-ok
--- ==================================================
+
 CREATE TABLE IF NOT EXISTS Employees (
     Id              INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
     EmployeeId      VARCHAR(50)   NOT NULL,
@@ -236,9 +234,9 @@ CREATE INDEX IDX_Employees_EmployeeName ON Employees (EmployeeName);
 CREATE INDEX IDX_Employees_IsActive     ON Employees (IsActive);
 
 
--- =============================================================================
+-----------------------------------------------------------------------
 -- 8. DELIVERY PERSONS
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS DeliveryPersons (
     Id                  INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
     DeliveryPersonNIC   VARCHAR(100)  NOT NULL,
@@ -252,9 +250,9 @@ CREATE TABLE IF NOT EXISTS DeliveryPersons (
 
 CREATE INDEX IX_DeliveryPersons_NIC ON DeliveryPersons (DeliveryPersonNIC);
 
--- =============================================================================
+------------------------------------------------------------------------
 -- 9. CUSTOMERS-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS Customers (
     Id           INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
     CustomerName VARCHAR(150)  NOT NULL,
@@ -263,9 +261,9 @@ CREATE TABLE IF NOT EXISTS Customers (
 
 CREATE INDEX IX_Customers_CustomerName ON Customers (CustomerName);
 
--- =============================================================================
+--------------------------------------------------------------------------------
 -- 10. PACKAGE DESCRIPTIONS-0k
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS PackageDescriptions (
     Id                 INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
     PackageDescription VARCHAR(225)  NOT NULL,
@@ -274,9 +272,9 @@ CREATE TABLE IF NOT EXISTS PackageDescriptions (
 
 CREATE INDEX IX_PackageDescriptions_Description ON PackageDescriptions (PackageDescription);
 
--- =============================================================================
+--------------------------------------------------------------------------
 -- 11. DELIVERY COMPANIES-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS DeliveryCompanies (
     Id                  INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
     DeliveryCompanyName VARCHAR(150)  NOT NULL,
@@ -285,17 +283,17 @@ CREATE TABLE IF NOT EXISTS DeliveryCompanies (
 
 CREATE INDEX IX_DeliveryCompanies_CompanyName ON DeliveryCompanies (DeliveryCompanyName);
 
--- =============================================================================
+---------------------------------------------------------------------------------------
 -- 12. APP SETTINGS-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS AppSettings (
     `Key`   VARCHAR(100) NOT NULL PRIMARY KEY,
     `Value` VARCHAR(500) NOT NULL
 );
 
--- =============================================================================
+---------------------------------------------------------------------------------
 -- 13. LOGIN SESSIONS-ok
--- =============================================================================
+
 CREATE TABLE IF NOT EXISTS LoginSessions (
     Id        INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
     UserId    INT           NOT NULL,
@@ -314,9 +312,8 @@ CREATE TABLE IF NOT EXISTS LoginSessions (
 CREATE INDEX IX_LoginSessions_UserId   ON LoginSessions (UserId);
 CREATE INDEX IX_LoginSessions_IsActive ON LoginSessions (IsActive);
 
--- =============================================================================
+----------------------------------------------------------------------------------
 -- 14. USER PERMISSIONS-ok
--- =============================================================================
 CREATE TABLE IF NOT EXISTS UserPermissions (
     Id                       INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
     AccessId                 VARCHAR(50)   NOT NULL,
@@ -355,13 +352,10 @@ CREATE TABLE IF NOT EXISTS UserPermissions (
     CONSTRAINT UQ_UserPermissions_AccessId UNIQUE (AccessId)
 );
 
--- =============================================================================
+--------------------------------------------------------------
 -- 15. DEFAULT APP SETTINGS-ok
--- =============================================================================
+
 INSERT INTO AppSettings (`Key`, `Value`)
 VALUES ('OVERDUE_HOURS', '8')
 ON DUPLICATE KEY UPDATE `Value` = `Value`;
 
--- =============================================================================
--- END OF SCHEMA
--- =============================================================================

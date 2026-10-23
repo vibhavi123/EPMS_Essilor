@@ -76,8 +76,8 @@ export default function ReportModal({
                     <th className="px-4 py-3 text-left font-bold text-[#0084c8]">Date</th>
                     <th className="px-4 py-3 text-left font-bold text-[#0084c8]">Time</th>
                     <th className="px-4 py-3 text-left font-bold text-[#0084c8]">Employee Verified ID</th>
+                    <th className="px-4 py-3 text-left font-bold text-[#0084c8]">Receive Guard ID</th>
                     <th className="px-4 py-3 text-left font-bold text-[#0084c8]">Hand Over Guard ID</th>
-                    <th className="px-4 py-3 text-left font-bold text-[#0084c8]">Guard ID</th>
                     <th className="px-4 py-3 text-left font-bold text-[#0084c8]">Verified Date</th>
                     <th className="px-4 py-3 text-left font-bold text-[#0084c8]">Verified Time</th>
                   </tr>
@@ -165,9 +165,9 @@ export default function ReportModal({
                         <td className="px-4 py-3">{pkg.vehicleType || "N/A"}</td>
                         <td className="px-4 py-3">{pkg.date || "N/A"}</td>
                         <td className="px-4 py-3">{pkg.time || "N/A"}</td>
-                        <td className="px-4 py-3">{pkg.employeeVerifiedId || "N/A"}</td>
+                        <td className="px-4 py-3">{pkg.type === "Outgoing" ? (pkg.employeeVerifiedId || "N/A") : "N/A"}</td>
+                        <td className="px-4 py-3">{pkg.type === "Incoming" ? (pkg.guardId || "N/A") : "N/A"}</td>
                         <td className="px-4 py-3">{pkg.handOverGuardId || "N/A"}</td>
-                        <td className="px-4 py-3">{pkg.guardId || "N/A"}</td>
                         <td className="px-4 py-3">{verifiedDate}</td>
                         <td className="px-4 py-3">{verifiedTime}</td>
                       </tr>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
 import type { Pool, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import { getRequestAccessContext } from "@/lib/server/accessControl";
+import { ensureExitApprovalsTable } from "@/app/api/exit-approvals/route";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,33 @@ export async function POST(request: NextRequest) {
 
     const pool: Pool = await getConnection();
 
+    let approvalIdToConsume: number | null = null;
+
     if (type === "employee") {
+      await ensureExitApprovalsTable(pool);
+
+      const [approvalRows] = await pool.query<RowDataPacket[]>(
+        `SELECT Id FROM EmployeeExitApprovals
+         WHERE (EmployeeId = ? OR TRIM(EmployeeId) = ?)
+           AND Status = 'approved'
+           AND ApprovedAt > DATE_SUB(NOW(6), INTERVAL 12 HOUR)
+         ORDER BY ApprovedAt DESC
+         LIMIT 1`,
+        [personnelId, personnelId]
+      );
+
+      if (!approvalRows.length) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Exit denied: Admin or SuperAdmin approval is required (approvals expire after 12 hours) before this employee can exit.",
+          },
+          { status: 403 }
+        );
+      }
+
+      approvalIdToConsume = Number(approvalRows[0].Id);
+
       const [dupRows] = await pool.query<RowDataPacket[]>(
         `SELECT Id FROM GateRecords
          WHERE PersonnelId = ? AND Type = 'employee' AND ExitTime IS NULL
@@ -152,6 +179,15 @@ export async function POST(request: NextRequest) {
         employeeExitReason ?? null,
       ]
     );
+
+    if (approvalIdToConsume) {
+      await pool.query(
+        `UPDATE EmployeeExitApprovals
+         SET Status = 'used', UsedAt = NOW(6), GateRecordId = ?
+         WHERE Id = ?`,
+        [result.insertId, approvalIdToConsume]
+      );
+    }
 
     return NextResponse.json(
       {

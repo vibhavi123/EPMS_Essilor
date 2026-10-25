@@ -50,6 +50,7 @@ export const ROUTES = {
     IMPORT_EMPLOYEES: "/Admin/AddPackage/AddEmployee/Import",
     OVERDUE_SETTINGS: "/Admin/OverdueSettings",
     LOGIN_MONITOR: "/Admin/LoginMonitor",
+    EXIT_APPROVAL: "/Admin/ExitApproval",
   },
   
   // Other Routes
@@ -128,5 +129,6 @@ export function useNavigation() {
     goToImportEmployees: () => router.push(ROUTES.ADMIN.IMPORT_EMPLOYEES),
     goToOverdueSettings: () => router.push(ROUTES.ADMIN.OVERDUE_SETTINGS),
     goToLoginMonitor: () => router.push(ROUTES.ADMIN.LOGIN_MONITOR),
+    goToExitApproval: () => router.push(ROUTES.ADMIN.EXIT_APPROVAL),
   };
 }

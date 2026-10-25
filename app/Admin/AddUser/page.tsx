@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Sidebar from "@/components/Sidebar";
 import AlertModal from "@/components/AlertModal";
 import { ChevronDown, UserPlus, Copy, Check, RotateCcw, ArrowLeft, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { useNavigation } from "@/hooks/useNavigation";
 import { fetchNextAccessId } from "@/utils/idSequenceClient";
+import { EmployeeData } from "@/utils/formTypes";
 
 type UserFormState = {
   accessId: string;
+  employeeId: string;
   username: string;
   fullName: string;
   role: "Employee" | "admin" | "guard" | "superAdmin";
@@ -21,6 +23,7 @@ type UserFormState = {
 type CreatedUser = {
   id: number;
   accessId: string;
+  employeeId?: string | null;
   username: string;
   fullName: string;
   role: string;
@@ -35,6 +38,7 @@ export default function AccessManagementPage() {
   const [isCheckingPermissions, setIsCheckingPermissions] = useState(true);
   const [formData, setFormData] = useState<UserFormState>({
     accessId: "",
+    employeeId: "",
     username: "",
     fullName: "",
     role: "guard",
@@ -43,6 +47,10 @@ export default function AccessManagementPage() {
     password: "",
     confirmPassword: "",
   });
+  const [employeeSuggestions, setEmployeeSuggestions] = useState<EmployeeData[]>([]);
+  const [showEmpSuggestions, setShowEmpSuggestions] = useState(false);
+  const empBoxRef = useRef<HTMLDivElement>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdUser, setCreatedUser] = useState<CreatedUser | null>(null);
   const [copiedAccessId, setCopiedAccessId] = useState(false);
@@ -90,17 +98,59 @@ export default function AccessManagementPage() {
     void loadAccessId(formData.role);
   }, [formData.role]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (empBoxRef.current && !empBoxRef.current.contains(e.target as Node)) {
+        setShowEmpSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const query = formData.fullName.trim();
+    if (!query) {
+      setEmployeeSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/employees?scope=all&limit=8&search=${encodeURIComponent(query)}`
+        );
+        const data = await res.json();
+        if (res.ok && data?.success && Array.isArray(data.data)) {
+          setEmployeeSuggestions(data.data);
+        }
+      } catch {
+        setEmployeeSuggestions([]);
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [formData.fullName]);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
     field: keyof UserFormState
   ) => {
     const value = e.target.value as UserFormState[keyof UserFormState];
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === "fullName" ? { employeeId: "" } : {}),
+    }));
+    if (field === "fullName") {
+      setShowEmpSuggestions(true);
+    }
   };
 
   const resetForm = () => {
     setFormData({
       accessId: "",
+      employeeId: "",
       username: "",
       fullName: "",
       role: "guard",
@@ -110,6 +160,7 @@ export default function AccessManagementPage() {
       confirmPassword: "",
     });
     setCopiedAccessId(false);
+    setShowEmpSuggestions(false);
   };
 
   const copyAccessIdToClipboard = () => {
@@ -178,6 +229,7 @@ export default function AccessManagementPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           accessId: formData.accessId,
+          employeeId: formData.employeeId || undefined,
           username: formData.username,
           fullName: formData.fullName,
           role: formData.role,
@@ -278,10 +330,11 @@ export default function AccessManagementPage() {
               </div>
               <dl className="grid gap-px overflow-hidden rounded-xl bg-border sm:grid-cols-2">
                 {[
-                  ['Username', createdUser?.username], 
-                  ['Full Name', createdUser?.fullName], 
-                  ['Department', createdUser?.department ?? '-'], 
-                  ['Company', createdUser?.company ?? '-']
+                  ['Username', createdUser?.username],
+                  ['Full Name', createdUser?.fullName],
+                  ['Linked Employee ID', createdUser?.employeeId ?? '-'],
+                  ['Department', createdUser?.department ?? '-'],
+                  ['Company', createdUser?.company ?? '-'],
                 ].map(([k, v]) => (
                   <div key={k} className="bg-card px-4 py-3">
                     <dt className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{k}</dt>
@@ -307,9 +360,9 @@ export default function AccessManagementPage() {
                 <span className="flex-1">{alertModal.message}</span>
               </div>
             )}
-            
+
             <div className="space-y-1.5">
-              <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Access ID</label>
+              <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Access ID (Account ID)</label>
               <div className="flex items-center gap-2">
                 <div className="flex h-11 flex-1 items-center rounded-lg border border-dashed border-primary/40 bg-primary/6 px-3 font-mono text-sm font-bold tracking-wide text-navy">
                   {formData.accessId}
@@ -336,14 +389,57 @@ export default function AccessManagementPage() {
                   autoComplete="username"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Full Name *</label>
+              <div className="space-y-1.5 relative" ref={empBoxRef}>
+                <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Full Name (or Search Employee Name / ID) *
+                </label>
                 <input
                   type="text"
                   className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-navy transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
                   value={formData.fullName}
+                  placeholder="Type name or EMP... ID to link employee"
+                  onFocus={() => {
+                    if (employeeSuggestions.length > 0) setShowEmpSuggestions(true);
+                  }}
                   onChange={(e) => handleInputChange(e, "fullName")}
                 />
+                {formData.employeeId && (
+                  <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-green-600">
+                    <CheckCircle2 className="size-3.5" /> Linked Employee ID: <span className="font-mono">{formData.employeeId}</span>
+                  </p>
+                )}
+                {showEmpSuggestions && employeeSuggestions.length > 0 && (
+                  <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-xl border border-border bg-card shadow-lift divide-y divide-border">
+                    {employeeSuggestions.map((emp) => (
+                      <li key={emp.employeeId}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              fullName: emp.employeeName,
+                              employeeId: emp.employeeId,
+                              department: emp.department || prev.department,
+                              company: emp.employeeCompany || prev.company,
+                            }));
+                            setShowEmpSuggestions(false);
+                          }}
+                          className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm transition-colors hover:bg-secondary"
+                        >
+                          <div>
+                            <div className="font-semibold text-navy">{emp.employeeName}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {emp.department || "N/A"} · {emp.employeeCompany || "N/A"}
+                            </div>
+                          </div>
+                          <span className="font-mono text-[12px] font-bold text-primary">
+                            {emp.employeeId}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="space-y-1.5">

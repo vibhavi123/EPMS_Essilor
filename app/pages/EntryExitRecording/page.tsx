@@ -7,7 +7,6 @@ import DateTime from "@/components/DateTime";
 import RecordVerificationModal from "@/components/RecordVerificationModal";
 import OverdueEmployeeAlert from "@/components/OverdueEmployeeAlert";
 import { GateRecordRow, EmployeeData } from "@/utils/formTypes";
-import { searchEmployees } from "@/lib/api/employees";
 import {
   User, Briefcase, Scan, ArrowRightLeft, UserCheck,
   Truck, RefreshCw, AlertCircle, CheckCircle, Search, X,
@@ -45,7 +44,17 @@ export default function GateControlPage() {
   const [verificationRecord, setVerificationRecord] = useState<GateRecordRow | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeData | null>(null);
+  const [employeeApproval, setEmployeeApproval] = useState<{
+    id: number;
+    employeeId: string;
+    approvedByAccessId: string;
+    approvedByName: string;
+    approvedByRole: string;
+    approvedAt: string;
+  } | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const [isSearchingEmployee, setIsSearchingEmployee] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [overdueHours, setOverdueHours] = useState<number | null>(null);
 
   // Fetch overdue hours threshold
@@ -128,29 +137,41 @@ export default function GateControlPage() {
     }
   }, [showToast]);
 
-  // Search for employee by ID 
+  // Search for employee by ID — only shows employee ID & details if Admin/SuperAdmin exit approval exists
   const searchEmployeeById = useCallback(async (employeeId: string) => {
-    if (!employeeId.trim()) {
+    const trimmed = employeeId.trim();
+    if (!trimmed) {
       setSelectedEmployee(null);
+      setEmployeeApproval(null);
+      setApprovalError(null);
       return;
     }
 
     setIsSearchingEmployee(true);
+    setApprovalError(null);
     try {
-      const results = await searchEmployees(employeeId, 10);
-      if (results.length > 0) {
-        // Find exact match by employeeId or take first result
-        const employee = results.find((e) => e.employeeId === employeeId.trim()) || results[0];
-        setSelectedEmployee(employee);
+      const res = await fetch(
+        `/api/exit-approvals?checkEmployee=1&employeeId=${encodeURIComponent(trimmed)}`
+      );
+      const data = await res.json();
+
+      if (res.ok && data?.success && data?.approved && data?.data?.employee) {
+        setSelectedEmployee(data.data.employee as EmployeeData);
+        setEmployeeApproval(data.data.approval ?? null);
+        setApprovalError(null);
       } else {
         setSelectedEmployee(null);
-        showToast(`Employee ID not found in database`, "error");
+        setEmployeeApproval(null);
+        const msg =
+          data?.message ||
+          "Exit not approved: Admin or SuperAdmin approval is required before this employee ID can be shown or used to exit.";
+        setApprovalError(msg);
       }
-    } catch (err) {
-      // Error is intentionally ignored - using fallback behavior
-      void err;
+    } catch {
       setSelectedEmployee(null);
-      showToast("Error searching for employee", "error");
+      setEmployeeApproval(null);
+      setApprovalError("Error checking employee exit approval");
+      showToast("Error checking employee exit approval", "error");
     } finally {
       setIsSearchingEmployee(false);
     }
@@ -230,14 +251,16 @@ export default function GateControlPage() {
           "success"
         );
         // Reset inputs
-                setIdInput("");
+        setIdInput("");
         setVisitorName("");
         setReason("");
-                setExitReason("");
+        setExitReason("");
         setDriverName("");
         setVehicleType("Van");
         setPlateNumber("");
         setSelectedEmployee(null);
+        setEmployeeApproval(null);
+        setApprovalError(null);
         // Refresh list
         fetchActiveRecords();
       } else {
@@ -507,12 +530,35 @@ export default function GateControlPage() {
                             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-lg text-center"
                             value={idInput}
                             onChange={(e) => {
-                              setIdInput(e.target.value);
+                              const val = e.target.value;
+                              setIdInput(val);
                               if (mode === "employee") {
-                                searchEmployeeById(e.target.value);
+                                setSelectedEmployee(null);
+                                setEmployeeApproval(null);
+                                setApprovalError(null);
+                                if (searchDebounceRef.current) {
+                                  clearTimeout(searchDebounceRef.current);
+                                }
+                                if (val.trim()) {
+                                  searchDebounceRef.current = setTimeout(() => {
+                                    void searchEmployeeById(val);
+                                  }, 300);
+                                }
                               }
                             }}
-                            onKeyDown={(e) => e.key === "Enter" && handleRecordEntry()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                if (mode === "employee" && !selectedEmployee) {
+                                  if (searchDebounceRef.current) {
+                                    clearTimeout(searchDebounceRef.current);
+                                  }
+                                  void searchEmployeeById(idInput);
+                                } else {
+                                  void handleRecordEntry();
+                                }
+                              }
+                            }}
                             placeholder="Scan now..."
                           />
                           <Scan className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={20} />
@@ -534,7 +580,14 @@ export default function GateControlPage() {
                       {mode === "employee" && isSearchingEmployee && (
                         <div className="text-sm text-gray-600 flex items-center gap-2">
                           <div className="animate-spin inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
-                          Searching employee...
+                          Checking exit approval...
+                        </div>
+                      )}
+
+                      {mode === "employee" && approvalError && !isSearchingEmployee && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs font-semibold text-red-600 flex items-start gap-2">
+                          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                          <span>{approvalError}</span>
                         </div>
                       )}
 
@@ -543,6 +596,11 @@ export default function GateControlPage() {
                           <div><span className="text-gray-600">Name:</span> <span className="font-semibold">{selectedEmployee.employeeName}</span></div>
                           {selectedEmployee.employeeCompany && <div><span className="text-gray-600">Company:</span> <span className="font-semibold">{selectedEmployee.employeeCompany}</span></div>}
                           {selectedEmployee.department && <div><span className="text-gray-600">Department:</span> <span className="font-semibold">{selectedEmployee.department}</span></div>}
+                          {employeeApproval && (
+                            <div className="pt-1 border-t border-blue-200/70 text-xs text-green-700 font-semibold">
+                              ✓ Approved by {employeeApproval.approvedByName}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -555,8 +613,8 @@ export default function GateControlPage() {
                   disabled={
                     isSubmitting ||
                     (mode !== "vehicle" && !idInput.trim()) ||
-                      (mode === "vehicle" && !plateNumber.trim()) ||
-                      (mode === "employee" && !exitReason.trim())
+                    (mode === "vehicle" && !plateNumber.trim()) ||
+                    (mode === "employee" && (!selectedEmployee || !exitReason.trim()))
                   }
                   className="w-full bg-[#0084c8] hover:bg-[#0071ad] disabled:bg-gray-300 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed"
                 >
@@ -630,7 +688,7 @@ export default function GateControlPage() {
                   scannedRecord ? (
                     <div className="bg-green-50 border border-green-300 rounded-xl p-4 flex items-center justify-between gap-4">
                       <div className="space-y-0.5">
-                        <p className="font-bold text-green-900 text-base">{scannedRecord.name ?? scannedRecord.personnelId}</p>
+                        <p className="font-bold text-green-900 text-base">{scannedRecord.name ?? "Employee"}</p>
                         {scannedRecord.type === "vehicle" && scannedRecord.plateNumber && (
                           <p className="text-xs font-mono text-green-700">{scannedRecord.plateNumber} · {scannedRecord.vehicleType}</p>
                         )}

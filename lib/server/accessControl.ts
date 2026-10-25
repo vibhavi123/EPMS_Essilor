@@ -27,7 +27,8 @@ export type PermissionKey =
   | "addPackageCustomer"
   | "addPackageDelivery"
   | "employeeVerifiedIdView"
-  | "guardVerifiedIdView";
+  | "guardVerifiedIdView"
+  | "exitApproval";
 
 export type PermissionsMap = Record<PermissionKey, boolean>;
 
@@ -56,6 +57,7 @@ export const DEFAULT_PERMISSIONS: PermissionsMap = {
   addPackageDelivery: false,
   employeeVerifiedIdView: false,
   guardVerifiedIdView: false,
+  exitApproval: false,
 };
 
 export const FULL_PERMISSIONS: PermissionsMap = {
@@ -83,6 +85,7 @@ export const FULL_PERMISSIONS: PermissionsMap = {
   addPackageDelivery: true,
   employeeVerifiedIdView: true,
   guardVerifiedIdView: true,
+  exitApproval: true,
 };
 
 const PERMISSION_COLUMNS = `
@@ -91,7 +94,8 @@ const PERMISSION_COLUMNS = `
   AccessManagementControl, GuardManagementAdd, GuardManagementEdit, GuardManagementDelete,
   GuardManagementView, ReportAccess, EntryExitRecording, VerifyHoldingPackages,
   OverdueEmployeeAlert, LoginMonitoring, AddPackageEmployee, AddPackageDescription,
-  AddPackageCustomer, AddPackageDelivery, EmployeeVerifiedIdView, GuardVerifiedIdView, AllEntryExitRecordsExport
+  AddPackageCustomer, AddPackageDelivery, EmployeeVerifiedIdView, GuardVerifiedIdView, AllEntryExitRecordsExport,
+  ExitApproval
 `;
 
 export function mapPermissionRecord(row?: Record<string, unknown>): PermissionsMap {
@@ -124,6 +128,7 @@ export function mapPermissionRecord(row?: Record<string, unknown>): PermissionsM
     addPackageDelivery: Boolean(row.AddPackageDelivery),
     employeeVerifiedIdView: Boolean(row.EmployeeVerifiedIdView),
     guardVerifiedIdView: Boolean(row.GuardVerifiedIdView),
+    exitApproval: Boolean(row.ExitApproval),
   };
 }
 

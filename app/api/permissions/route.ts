@@ -32,6 +32,7 @@ export interface UserPermissions {
   loginMonitor: boolean;
   employeeVerifiedIdView: boolean;
   guardVerifiedIdView: boolean;
+  exitApproval: boolean;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -63,6 +64,7 @@ const permissionFieldMap: Record<string, string> = {
   loginMonitor: "LoginMonitoring",
   employeeVerifiedIdView: "EmployeeVerifiedIdView",
   guardVerifiedIdView: "GuardVerifiedIdView",
+  exitApproval: "ExitApproval",
 };
 
 function mapPermissions(row: Record<string, unknown>): UserPermissions {
@@ -95,6 +97,7 @@ function mapPermissions(row: Record<string, unknown>): UserPermissions {
     loginMonitor: Boolean(row.LoginMonitoring ?? row.LoginMonitor),
     employeeVerifiedIdView: Boolean(row.EmployeeVerifiedIdView),
     guardVerifiedIdView: Boolean(row.GuardVerifiedIdView),
+    exitApproval: Boolean(row.ExitApproval),
     createdAt: row.CreatedAt ? new Date(row.CreatedAt as string).toISOString() : null,
     updatedAt: row.UpdatedAt ? new Date(row.UpdatedAt as string).toISOString() : null,
   };

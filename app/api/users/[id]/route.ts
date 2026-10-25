@@ -194,6 +194,8 @@ export async function PATCH(
       );
     }
 
+
+    // i want to use the employee id that have  Admin / SuperAdmin  access  account so they can use Empoyee id for give the apprval to Employees . in user account that id can't be use for approvai in Exit apporval 
     await pool.query(
       `UPDATE Users SET ${updates.join(", ")}, UpdatedAt = NOW(6) WHERE Id = ?`,
       [...queryParams, id]

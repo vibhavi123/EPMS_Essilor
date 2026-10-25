@@ -45,6 +45,7 @@ interface UserPermissionsData {
   loginMonitor: boolean;
   employeeVerifiedIdView: boolean;
   guardVerifiedIdView: boolean;
+  exitApproval: boolean;
 }
 
 const DEFAULT_PERMISSIONS: UserPermissionsData = {
@@ -74,6 +75,7 @@ const DEFAULT_PERMISSIONS: UserPermissionsData = {
   loginMonitor: false,
   employeeVerifiedIdView: false,
   guardVerifiedIdView: false,
+  exitApproval: false,
 };
 
 function ToggleSwitch({ isActive, onChange, disabled = false }: { isActive: boolean; onChange: () => void; disabled?: boolean }) {
@@ -155,6 +157,7 @@ export default function AccessControlModal({ isOpen, selectedUser, onClose, onPe
           loginMonitor: Boolean(data.data.loginMonitor),
           employeeVerifiedIdView: Boolean(data.data.employeeVerifiedIdView),
           guardVerifiedIdView: Boolean(data.data.guardVerifiedIdView),
+          exitApproval: Boolean(data.data.exitApproval),
         });
       }
     } catch (error) {
@@ -521,6 +524,16 @@ export default function AccessControlModal({ isOpen, selectedUser, onClose, onPe
                   disabled={isSaving || isSelf}
                   isActive={permissions.entryExitRecording}
                   onChange={() => togglePermission("entryExitRecording")}
+                />
+              </div>
+
+              {/* Exit Approval */}
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-lg font-semibold text-[#2d3748]">Exit Approval</span>
+                <ToggleSwitch
+                  disabled={isSaving || isSelf}
+                  isActive={permissions.exitApproval}
+                  onChange={() => togglePermission("exitApproval")}
                 />
               </div>
 

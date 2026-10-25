@@ -15,6 +15,7 @@ USE GuardSystemDB;
 CREATE TABLE IF NOT EXISTS Users (
     Id           INT            NOT NULL AUTO_INCREMENT PRIMARY KEY,
     AccessId     VARCHAR(50)    NOT NULL,
+    EmployeeId   VARCHAR(50)    NULL,
     Username     VARCHAR(100)   NOT NULL,
     PasswordHash VARCHAR(255)   NOT NULL,
     FullName     VARCHAR(150)   NOT NULL,
@@ -344,6 +345,7 @@ CREATE TABLE IF NOT EXISTS UserPermissions (
     AllEntryExitRecordsExport TINYINT(1)  NOT NULL DEFAULT 0,
     EmployeeVerifiedIdView   TINYINT(1)   NOT NULL DEFAULT 0,
     GuardVerifiedIdView      TINYINT(1)   NOT NULL DEFAULT 0,
+    ExitApproval             TINYINT(1)   NOT NULL DEFAULT 0,
 
     CreatedAt  DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     UpdatedAt  DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -358,4 +360,24 @@ CREATE TABLE IF NOT EXISTS UserPermissions (
 INSERT INTO AppSettings (`Key`, `Value`)
 VALUES ('OVERDUE_HOURS', '8')
 ON DUPLICATE KEY UPDATE `Value` = `Value`;
+
+-- =============================================================================
+-- 16. EMPLOYEE EXIT APPROVALS
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS EmployeeExitApprovals (
+    Id                  INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    EmployeeId          VARCHAR(50)   NOT NULL,
+    EmployeeName        VARCHAR(150)  NOT NULL,
+    EmployeeCompany     VARCHAR(150)  NULL,
+    Department          VARCHAR(100)  NULL,
+    ApprovedByAccessId  VARCHAR(50)   NOT NULL,
+    ApprovedByName      VARCHAR(150)  NOT NULL,
+    ApprovedByRole      VARCHAR(50)   NOT NULL,
+    Status              VARCHAR(30)   NOT NULL DEFAULT 'approved',
+    ApprovedAt          DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    UsedAt              DATETIME(6)   NULL,
+    GateRecordId        INT           NULL,
+    INDEX IX_ExitApprovals_EmployeeId (EmployeeId),
+    INDEX IX_ExitApprovals_Status (Status)
+);
 

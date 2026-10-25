@@ -30,6 +30,7 @@ export interface UserPermissionsResponse {
   loginMonitor: boolean;
   employeeVerifiedIdView: boolean;
   guardVerifiedIdView: boolean;
+  exitApproval: boolean;
 }
 
 const EMPTY_PERMISSIONS: UserPermissionsResponse = {
@@ -59,6 +60,7 @@ const EMPTY_PERMISSIONS: UserPermissionsResponse = {
   loginMonitor: false,
   employeeVerifiedIdView: false,
   guardVerifiedIdView: false,
+  exitApproval: false,
 };
 
 function mapRow(row: Record<string, unknown>): UserPermissionsResponse {
@@ -89,6 +91,7 @@ function mapRow(row: Record<string, unknown>): UserPermissionsResponse {
     loginMonitor: Boolean(row.LoginMonitoring ?? row.LoginMonitor),
     employeeVerifiedIdView: Boolean(row.EmployeeVerifiedIdView),
     guardVerifiedIdView: Boolean(row.GuardVerifiedIdView),
+    exitApproval: Boolean(row.ExitApproval),
   };
 }
 
@@ -131,6 +134,7 @@ export async function GET(request: NextRequest) {
             accessContext.permissions.accessManagementControl,
           employeeVerifiedIdView: accessContext.permissions.employeeVerifiedIdView,
           guardVerifiedIdView: accessContext.permissions.guardVerifiedIdView,
+          exitApproval: accessContext.permissions.exitApproval,
           allEntryExitRecordsExport: true,
         },
       });
@@ -144,7 +148,8 @@ export async function GET(request: NextRequest) {
         OutgoingVerification, IncomeVerification, AccessManagementAdd, AccessManagementEdit,
         AccessManagementControl, GuardManagementAdd, GuardManagementEdit, GuardManagementDelete,
         GuardManagementView, ReportAccess, EntryExitRecording, AllEntryExitRecordsExport,
-        VerifyHoldingPackages, OverdueEmployeeAlert, LoginMonitoring, EmployeeVerifiedIdView, GuardVerifiedIdView
+        VerifyHoldingPackages, OverdueEmployeeAlert, LoginMonitoring, EmployeeVerifiedIdView, GuardVerifiedIdView,
+        ExitApproval
        FROM UserPermissions
        WHERE AccessId = ?
        LIMIT 1`,

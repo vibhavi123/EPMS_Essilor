@@ -9,6 +9,7 @@ function mapUserRow(r: Record<string, unknown>) {
   return {
     id: r.Id,
     accessId: r.AccessId ?? "",
+    employeeId: r.EmployeeId ?? null,
     username: r.Username,
     fullName: r.FullName,
     role: r.Role,
@@ -42,20 +43,25 @@ export async function GET(request: NextRequest) {
 
     const search = request.nextUrl.searchParams.get("search")?.trim() ?? "";
     const pool: Pool = await getConnection();
+    try {
+      await pool.query(`ALTER TABLE Users ADD COLUMN EmployeeId VARCHAR(50) NULL`);
+    } catch {
+      // Column already exists
+    }
 
     let rows: RowDataPacket[];
     if (search) {
       const pattern = `%${search}%`;
       [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT Id, AccessId, Username, FullName, Role, Department, Company, IsActive, CreatedAt, UpdatedAt
+        `SELECT Id, AccessId, EmployeeId, Username, FullName, Role, Department, Company, IsActive, CreatedAt, UpdatedAt
          FROM Users
-         WHERE Username LIKE ? OR FullName LIKE ? OR Role LIKE ?
+         WHERE Username LIKE ? OR FullName LIKE ? OR Role LIKE ? OR EmployeeId LIKE ?
          ORDER BY CreatedAt DESC, Id DESC`,
-        [pattern, pattern, pattern]
+        [pattern, pattern, pattern, pattern]
       );
     } else {
       [rows] = await pool.query<RowDataPacket[]>(
-        `SELECT Id, AccessId, Username, FullName, Role, Department, Company, IsActive, CreatedAt, UpdatedAt
+        `SELECT Id, AccessId, EmployeeId, Username, FullName, Role, Department, Company, IsActive, CreatedAt, UpdatedAt
          FROM Users ORDER BY CreatedAt DESC, Id DESC`
       );
     }
@@ -92,6 +98,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const accessIdInput = String(body.accessId ?? "").trim();
+    const employeeIdInput = String(body.employeeId ?? "").trim();
     const username = String(body.username ?? "").trim();
     const fullName = String(body.fullName ?? "").trim();
     const password = String(body.password ?? "");
@@ -114,9 +121,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-
     const pool: Pool = await getConnection();
+    try {
+      await pool.query(`ALTER TABLE Users ADD COLUMN EmployeeId VARCHAR(50) NULL`);
+    } catch {
+      // Column already exists
+    }
+
     const accessId = accessIdInput || (await generateNextAccessId(pool, role));
+
+    // Resolve linked EmployeeId from Employees table if provided or if FullName matches an active Employee
+    let linkedEmployeeId: string | null = null;
+    if (employeeIdInput) {
+      const [empRows] = await pool.query<RowDataPacket[]>(
+        "SELECT EmployeeId FROM Employees WHERE EmployeeId = ? AND IsActive = 1 LIMIT 1",
+        [employeeIdInput]
+      );
+      if (empRows.length > 0) {
+        linkedEmployeeId = String(empRows[0].EmployeeId);
+      }
+    }
+    if (!linkedEmployeeId) {
+      const [empByName] = await pool.query<RowDataPacket[]>(
+        "SELECT EmployeeId FROM Employees WHERE REPLACE(LOWER(TRIM(EmployeeName)), ' ', '') = REPLACE(LOWER(TRIM(?)), ' ', '') AND IsActive = 1 LIMIT 1",
+        [fullName]
+      );
+      if (empByName.length > 0) {
+        linkedEmployeeId = String(empByName[0].EmployeeId);
+      }
+    }
 
     const [dupUserRows] = await pool.query<RowDataPacket[]>(
       "SELECT Id FROM Users WHERE REPLACE(LOWER(Username), ' ', '') = REPLACE(LOWER(?), ' ', '') LIMIT 1",
@@ -136,13 +169,13 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password);
     const [insertResult] = await pool.query<ResultSetHeader>(
-      `INSERT INTO Users (AccessId, Username, PasswordHash, FullName, Role, Department, Company)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [accessId, username, passwordHash, fullName, role, department || null, company || null]
+      `INSERT INTO Users (AccessId, EmployeeId, Username, PasswordHash, FullName, Role, Department, Company)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [accessId, linkedEmployeeId, username, passwordHash, fullName, role, department || null, company || null]
     );
 
     const [createdRows] = await pool.query<RowDataPacket[]>(
-      `SELECT Id, AccessId, Username, FullName, Role, Department, Company, IsActive, CreatedAt, UpdatedAt
+      `SELECT Id, AccessId, EmployeeId, Username, FullName, Role, Department, Company, IsActive, CreatedAt, UpdatedAt
        FROM Users WHERE Id = ?`,
       [insertResult.insertId]
     );

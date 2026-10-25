@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Monitor,
   User,
+  UserCheck,
 
 } from 'lucide-react';
 
@@ -385,6 +386,13 @@ export default function Sidebar() {
                 >
                   <Monitor className="h-5 w-5 text-gray-800/90 group-hover:scale-110 transition-transform" />
                   <span className="font-bold text-[13px] opacity-90 group-hover:opacity-100">Login Monitor</span>
+                </button>
+                <button
+                  onClick={() => { nav.goToExitApproval(); setIsOpen(false); }}
+                  className="w-full flex items-center gap-4 rounded-xl px-4 py-2.5 transition-all duration-200 hover:bg-gray-200/80 text-gray-700 hover:text-gray-900 group"
+                >
+                  <UserCheck className="h-5 w-5 text-gray-800/90 group-hover:scale-110 transition-transform" />
+                  <span className="font-bold text-[13px] opacity-90 group-hover:opacity-100">Exit Approval</span>
                 </button>
               </div>
             </div>

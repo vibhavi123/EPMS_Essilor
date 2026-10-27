@@ -56,6 +56,7 @@ export const ROUTES = {
   // Other Routes
   REPORT: "/pages/Report",
   ENTRY_EXIT_RECORDING: "/pages/EntryExitRecording",
+  EXIT_APPROVAL_REQUEST: "/pages/ExitApprovalRequest",
 } as const;
 
 
@@ -119,6 +120,7 @@ export function useNavigation() {
     goToHoldingVerification: () => router.push(ROUTES.VERIFICATION.HOLDING),
     goToReport: () => router.push(ROUTES.REPORT),
     goToEntryExitRecording: () => router.push(ROUTES.ENTRY_EXIT_RECORDING),
+    goToExitApprovalRequest: () => router.push(ROUTES.EXIT_APPROVAL_REQUEST),
     goToAddUser: () => router.push(ROUTES.ADMIN.ADD_USER),
     goToAddGuard: () => router.push(ROUTES.ADMIN.ADD_GUARD),
     goToEditUser: (userId: string | number) => router.push(`${ROUTES.ADMIN.EDIT_USER}?id=${userId}`),

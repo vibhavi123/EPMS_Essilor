@@ -24,11 +24,13 @@ interface ExitApprovalRecord {
   employeeName: string;
   employeeCompany: string | null;
   department: string | null;
+  requestReason?: string | null;
+  requestedAt?: string | null;
   approvedByAccessId: string;
   approvedByName: string;
   approvedByRole: string;
   status: string;
-  approvedAt: string;
+  approvedAt: string | null;
   usedAt: string | null;
   gateRecordId?: number | null;
   exitReason?: string | null;
@@ -44,11 +46,16 @@ function ExitApprovalPageContent() {
 
   const [employeeIdInput, setEmployeeIdInput] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeData | null>(null);
+  const [approvalReason, setApprovalReason] = useState("");
   const [isLoadingEmployee, setIsLoadingEmployee] = useState(false);
   const [employeeSuggestions, setEmployeeSuggestions] = useState<EmployeeData[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<ExitApprovalRecord[]>([]);
+  const [pendingCurrentPage, setPendingCurrentPage] = useState(1);
+  const pendingPerPage = 10;
+  const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
   const [activeApprovals, setActiveApprovals] = useState<ExitApprovalRecord[]>([]);
   const [isLoadingApprovals, setIsLoadingApprovals] = useState(true);
   const [revokingId, setRevokingId] = useState<number | null>(null);
@@ -104,17 +111,34 @@ function ExitApprovalPageContent() {
   const fetchActiveApprovals = useCallback(async () => {
     setIsLoadingApprovals(true);
     try {
-      const res = await fetch("/api/exit-approvals?status=approved");
-      const data = await res.json();
-      if (res.ok && data?.success && Array.isArray(data.data)) {
-        const twelveHoursMs = 12 * 60 * 60 * 1000;
-        const now = Date.now();
-        const validApprovals = (data.data as ExitApprovalRecord[]).filter(
+      const [approvedRes, pendingRes] = await Promise.all([
+        fetch("/api/exit-approvals?status=approved"),
+        fetch("/api/exit-approvals?status=pending"),
+      ]);
+      const [approvedData, pendingData] = await Promise.all([
+        approvedRes.json(),
+        pendingRes.json(),
+      ]);
+
+      const twelveHoursMs = 12 * 60 * 60 * 1000;
+      const now = Date.now();
+
+      if (approvedRes.ok && approvedData?.success && Array.isArray(approvedData.data)) {
+        const validApprovals = (approvedData.data as ExitApprovalRecord[]).filter(
           (item) =>
             !item.approvedAt ||
             now - new Date(item.approvedAt).getTime() < twelveHoursMs
         );
         setActiveApprovals(validApprovals);
+      }
+
+      if (pendingRes.ok && pendingData?.success && Array.isArray(pendingData.data)) {
+        const validPending = (pendingData.data as ExitApprovalRecord[]).filter(
+          (item) =>
+            !item.requestedAt ||
+            now - new Date(item.requestedAt).getTime() < twelveHoursMs
+        );
+        setPendingRequests(validPending);
       }
     } catch {
       // silent fail on list load
@@ -130,9 +154,21 @@ function ExitApprovalPageContent() {
     }
     const interval = setInterval(() => {
       void fetchActiveApprovals();
-    }, 60 * 1000);
+    }, 20 * 1000);
     return () => clearInterval(interval);
   }, [fetchLoggedInApprover, fetchActiveApprovals]);
+
+  // Pagination helpers for Pending Employee Exit Requests table
+  const pendingTotalPages = Math.max(
+    1,
+    Math.ceil(pendingRequests.length / pendingPerPage)
+  );
+  const safePendingCurrentPage = Math.min(pendingCurrentPage, pendingTotalPages);
+  const pendingStartIndex = (safePendingCurrentPage - 1) * pendingPerPage;
+  const paginatedPendingRequests = pendingRequests.slice(
+    pendingStartIndex,
+    pendingStartIndex + pendingPerPage
+  );
 
   // Search & Pagination helpers for Approved Employees table
   const filteredApprovals = activeApprovals.filter((item) => {
@@ -143,6 +179,8 @@ function ExitApprovalPageContent() {
       item.employeeName.toLowerCase().includes(q) ||
       (item.department || "").toLowerCase().includes(q) ||
       (item.employeeCompany || "").toLowerCase().includes(q) ||
+      (item.requestReason || "").toLowerCase().includes(q) ||
+      (item.exitReason || "").toLowerCase().includes(q) ||
       item.approvedByName.toLowerCase().includes(q) ||
       item.approvedByAccessId.toLowerCase().includes(q)
     );
@@ -315,6 +353,9 @@ function ExitApprovalPageContent() {
     if (!selectedEmployee || !employeeIdInput.trim()) {
       missingFields.push("Requesting Employee ID (scan or type and click Insert)");
     }
+    if (!approvalReason.trim()) {
+      missingFields.push("Reason for Exit");
+    }
 
     if (missingFields.length > 0) {
       setAlertModal({
@@ -342,6 +383,7 @@ function ExitApprovalPageContent() {
         body: JSON.stringify({
           approverEmployeeId: selectedAdmin.employeeId,
           employeeId: selectedEmployee.employeeId,
+          requestReason: approvalReason.trim(),
         }),
       });
       const data = await res.json();
@@ -355,6 +397,7 @@ function ExitApprovalPageContent() {
 
       setEmployeeIdInput("");
       setSelectedEmployee(null);
+      setApprovalReason("");
       setEmployeeSuggestions([]);
       setShowSuggestions(false);
 
@@ -402,6 +445,74 @@ function ExitApprovalPageContent() {
       });
     } finally {
       setRevokingId(null);
+    }
+  };
+
+  const handleApprovePendingRequest = async (reqItem: ExitApprovalRecord) => {
+    setProcessingRequestId(reqItem.id);
+    try {
+      const res = await fetch("/api/exit-approvals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "approveRequest",
+          requestId: reqItem.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to approve request");
+      }
+      await fetchActiveApprovals();
+      setAlertModal({
+        isOpen: true,
+        title: "Request Approved",
+        message:
+          data?.message ||
+          `Exit request approved for ${reqItem.employeeName} (${reqItem.employeeId}).`,
+        type: "success",
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to approve request";
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+      });
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  const handleRejectPendingRequest = async (id: number) => {
+    setProcessingRequestId(id);
+    try {
+      const res = await fetch("/api/exit-approvals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "rejectRequest",
+          requestId: id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to reject request");
+      }
+      await fetchActiveApprovals();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to reject request";
+      setAlertModal({
+        isOpen: true,
+        title: "Error",
+        message: errorMessage,
+        type: "error",
+      });
+    } finally {
+      setProcessingRequestId(null);
     }
   };
 
@@ -485,7 +596,7 @@ function ExitApprovalPageContent() {
           escapeCsvCell(approvedTimeStr),
           escapeCsvCell(expiresAtStr),
           escapeCsvCell(usedAtStr || "Not Used"),
-          escapeCsvCell(r.exitReason ?? "N/A"),
+          escapeCsvCell(r.requestReason || r.exitReason || "N/A"),
           escapeCsvCell(r.departureTime ?? "N/A"),
           escapeCsvCell(r.returnTime ?? "N/A"),
           escapeCsvCell(r.guardId ?? "N/A"),
@@ -524,7 +635,7 @@ function ExitApprovalPageContent() {
     <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
       <Sidebar />
 
-      <main className="flex-1 lg:ml-72 p-4 md:p-10 pt-24 lg:pt-10 transition-all duration-300">
+      <main className="flex-1 min-w-0 lg:ml-72 p-4 md:p-8 pt-24 lg:pt-10 transition-all duration-300">
         <br />
 
         {/* Header Section */}
@@ -542,7 +653,7 @@ function ExitApprovalPageContent() {
         <hr className="border-gray-300 mb-10" />
 
         <form
-          className="space-y-10 max-w-7xl"
+          className="space-y-10 w-full"
           onSubmit={(e) => e.preventDefault()}
         >
           {/* Step 1: Approver Employee Information (Auto-loaded from logged-in Admin / SuperAdmin) */}
@@ -726,6 +837,19 @@ function ExitApprovalPageContent() {
                     </ul>
                   )}
                 </div>
+
+                {/* Reason for Exit Input */}
+                <div className="mt-4">
+                  <InputLabel label="Reason for Exit *" />
+                  <input
+                    type="text"
+                    value={approvalReason}
+                    onChange={(e) => setApprovalReason(e.target.value)}
+                    disabled={!selectedAdmin}
+                    placeholder="Enter reason for leaving the company (e.g., Medical appointment, Official visit, Personal work...)"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0084c8] text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
+                </div>
               </div>
 
               <div className="md:col-span-6">
@@ -791,8 +915,182 @@ function ExitApprovalPageContent() {
           </div>
         </form>
 
+        {/* Pending Employee Exit Requests Table */}
+        <section className="w-full mt-4 mb-10">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-[#5a677a]">
+                Pending Employee Exit Requests ({pendingRequests.length})
+              </h2>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            {isLoadingApprovals && pendingRequests.length === 0 ? (
+              <div className="p-8 text-center text-sm text-gray-500">
+                Loading pending employee exit requests...
+              </div>
+            ) : pendingRequests.length === 0 ? (
+              <div className="p-8 text-center text-sm text-gray-500">
+                No pending exit requests from employees right now.
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="bg-amber-50/70 border-b border-gray-200 text-xs font-bold uppercase tracking-wider text-gray-600">
+                        <th className="px-5 py-3">Employee ID</th>
+                        <th className="px-5 py-3">Employee Name</th>
+                        <th className="px-5 py-3">Department / Company</th>
+                        <th className="px-5 py-3">Request Reason</th>
+                        <th className="px-5 py-3">Requested Time</th>
+                        <th className="px-5 py-3">Expires At </th>
+                        <th className="px-5 py-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {paginatedPendingRequests.map((req) => {
+                        const reqDate = req.requestedAt
+                          ? new Date(req.requestedAt)
+                          : null;
+                        const reqExpiresDate = reqDate
+                          ? new Date(reqDate.getTime() + 12 * 60 * 60 * 1000)
+                          : null;
+                        return (
+                          <tr key={req.id} className="hover:bg-gray-50">
+                            <td className="px-5 py-3.5 font-mono font-bold text-[#0084c8]">
+                              {req.employeeId}
+                            </td>
+                            <td className="px-5 py-3.5 font-semibold text-[#0c244c]">
+                              {req.employeeName}
+                            </td>
+                            <td className="px-5 py-3.5 text-gray-600">
+                              {req.department || "N/A"} · {req.employeeCompany || "N/A"}
+                            </td>
+                            <td className="px-5 py-3.5 text-gray-700">
+                              {req.requestReason || "General Exit Request"}
+                            </td>
+                            <td className="px-5 py-3.5 text-gray-500 text-xs">
+                              {reqDate ? reqDate.toLocaleString() : "-"}
+                            </td>
+                            <td className="px-5 py-3.5 text-amber-700 font-medium text-xs">
+                              {reqExpiresDate ? reqExpiresDate.toLocaleString() : "-"}
+                            </td>
+                            <td className="px-5 py-3.5 text-right whitespace-nowrap space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => void handleApprovePendingRequest(req)}
+                                disabled={
+                                  processingRequestId === req.id || !selectedAdmin
+                                }
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-green-600 hover:bg-green-700 shadow-xs transition-all active:scale-95 disabled:opacity-50"
+                              >
+                                <CheckCircle2 size={14} />
+                                {processingRequestId === req.id
+                                  ? "Processing..."
+                                  : "Approve"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleRejectPendingRequest(req.id)
+                                }
+                                disabled={processingRequestId === req.id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 border border-red-200 transition-all disabled:opacity-50"
+                              >
+                                <X size={14} />
+                                Reject
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination Bar */}
+                <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50/60 px-5 py-3 flex-wrap gap-3">
+                  <p className="text-xs text-gray-600">
+                    Showing{" "}
+                    <span className="font-semibold text-[#0c244c]">
+                      {pendingStartIndex + 1}
+                    </span>{" "}
+                    to{" "}
+                    <span className="font-semibold text-[#0c244c]">
+                      {Math.min(
+                        pendingStartIndex + pendingPerPage,
+                        pendingRequests.length
+                      )}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-semibold text-[#0c244c]">
+                      {pendingRequests.length}
+                    </span>{" "}
+                    pending request{pendingRequests.length === 1 ? "" : "s"}
+                  </p>
+                  <div className="flex gap-1 items-center">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPendingCurrentPage((p) => Math.max(p - 1, 1))
+                      }
+                      disabled={safePendingCurrentPage === 1 || isLoadingApprovals}
+                      className="inline-flex h-8 items-center justify-center rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-[#0c244c] transition-all hover:bg-gray-100 disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      Prev
+                    </button>
+                    {getPageNumbers(
+                      safePendingCurrentPage,
+                      pendingTotalPages
+                    ).map((page, idx) =>
+                      typeof page === "number" ? (
+                        <button
+                          type="button"
+                          key={`pending-page-${page}`}
+                          onClick={() => setPendingCurrentPage(page)}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold transition-all ${
+                            safePendingCurrentPage === page
+                              ? "bg-[#0084c8] text-white shadow-sm"
+                              : "border border-gray-200 bg-white text-[#0c244c] hover:bg-gray-100"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ) : (
+                        <span
+                          key={`pending-ellipsis-${idx}`}
+                          className="inline-flex h-8 w-8 items-center justify-center text-gray-400 text-xs font-bold"
+                        >
+                          {page}
+                        </span>
+                      )
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPendingCurrentPage((p) =>
+                          Math.min(p + 1, pendingTotalPages)
+                        )
+                      }
+                      disabled={
+                        safePendingCurrentPage === pendingTotalPages ||
+                        isLoadingApprovals
+                      }
+                      className="inline-flex h-8 items-center justify-center rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-[#0c244c] transition-all hover:bg-gray-100 disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+
         {/* Active Pending Exit Approvals Table */}
-        <section className="max-w-7xl mt-4 pb-12">
+        <section className="w-full mt-4 pb-12">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-semibold text-[#5a677a]">
@@ -888,9 +1186,10 @@ function ExitApprovalPageContent() {
                         <th className="px-5 py-3">Employee ID</th>
                         <th className="px-5 py-3">Employee Name</th>
                         <th className="px-5 py-3">Department / Company</th>
+                        <th className="px-5 py-3">Reason</th>
                         <th className="px-5 py-3">Approved By (Employee ID)</th>
                         <th className="px-5 py-3">Approved Time</th>
-                        <th className="px-5 py-3">Expires At (12h)</th>
+                        <th className="px-5 py-3">Expires At </th>
                         <th className="px-5 py-3 text-right">Action</th>
                       </tr>
                     </thead>
@@ -912,6 +1211,9 @@ function ExitApprovalPageContent() {
                             </td>
                             <td className="px-5 py-3.5 text-gray-600">
                               {item.department || "N/A"} · {item.employeeCompany || "N/A"}
+                            </td>
+                            <td className="px-5 py-3.5 text-gray-700">
+                              {item.requestReason || item.exitReason || "-"}
                             </td>
                             <td className="px-5 py-3.5 text-gray-700">
                               <span className="font-semibold">{item.approvedByName}</span>{" "}

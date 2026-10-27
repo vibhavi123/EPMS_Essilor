@@ -158,6 +158,9 @@ export default function GateControlPage() {
       if (res.ok && data?.success && data?.approved && data?.data?.employee) {
         setSelectedEmployee(data.data.employee as EmployeeData);
         setEmployeeApproval(data.data.approval ?? null);
+        if (data.data.approval?.requestReason) {
+          setExitReason(String(data.data.approval.requestReason));
+        }
         setApprovalError(null);
       } else {
         setSelectedEmployee(null);

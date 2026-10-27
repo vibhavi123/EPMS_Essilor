@@ -234,10 +234,11 @@ export default function Sidebar() {
   const otherLinks: NavLink[] = [
     { label: 'View all packages', icon: PackageSearch, onClick: () => { nav.goToAllPackages(); setIsOpen(false); } },
     { label: 'Report', icon: ClipboardList, onClick: () => { nav.goToReport(); setIsOpen(false); } },
+    { label: 'Request Exit Approval', icon: UserCheck, onClick: () => { nav.goToExitApprovalRequest(); setIsOpen(false); } },
     { label: 'Entry & Exit Recording', icon: LogIn, badge: overdueCount > 0 ? overdueCount : undefined, onClick: () => { nav.goToEntryExitRecording(); setIsOpen(false); } },
-    { label: 'Verify Outgoing Packages', icon: PackageOpen, iconSize: 'h-7 w-7', onClick: () => { nav.goToAllOutgoingPackages(); setIsOpen(false); } },
-    { label: 'Verify Incoming Packages', icon: PackageCheck, iconSize: 'h-7 w-7', onClick: () => { nav.goToAllIncomingPackages(); setIsOpen(false); } },
-    { label: 'Verify Holding Packages', icon: AlertCircle, iconSize: 'h-7 w-7', onClick: () => { nav.goToHoldingVerification(); setIsOpen(false); } },
+    { label: 'Verify Outgoing Packages', icon: PackageOpen, onClick: () => { nav.goToAllOutgoingPackages(); setIsOpen(false); } },
+    { label: 'Verify Incoming Packages', icon: PackageCheck, onClick: () => { nav.goToAllIncomingPackages(); setIsOpen(false); } },
+    { label: 'Verify Holding Packages', icon: AlertCircle, onClick: () => { nav.goToHoldingVerification(); setIsOpen(false); } },
   ];
 
   const handleLogout = async () => {
@@ -314,8 +315,8 @@ export default function Sidebar() {
       `}>
         
         {/* Logo Section */}
-        <div className="bg-[#e5e5e5] border-b border-gray-300/60 px-4 py-2 flex justify-center items-center h-14 lg:h-16 shrink-0">
-          <div className="relative w-28 h-12">
+        <div className="bg-[#e5e5e5] border-b border-gray-300/60 px-4 py-1.5 flex justify-center items-center h-13 lg:h-14 shrink-0">
+          <div className="relative w-28 h-10">
             <Image
               src="/logo/essilor.png"
               alt="Essilor Logo"
@@ -328,11 +329,11 @@ export default function Sidebar() {
         </div>
 
         {/* User Profile Card */}
-        <div className="px-3.5 pt-3 pb-1 shrink-0">
-          <div className="surface-card p-3 flex items-center gap-3 transition-all hover:border-primary/40">
+        <div className="px-3.5 pt-2 pb-1 shrink-0">
+          <div className="surface-card p-2.5 flex items-center gap-3 transition-all hover:border-primary/40">
             {/* Avatar Circle */}
-            <div className="relative shrink-0 size-10 rounded-xl bg-gradient-navy text-white flex items-center justify-center font-bold text-xs shadow-sm border border-white/10">
-              {userProfile ? getInitials(userProfile.fullName, userProfile.username) : <User className="size-5" />}
+            <div className="relative shrink-0 size-9 rounded-xl bg-gradient-navy text-white flex items-center justify-center font-bold text-xs shadow-sm border border-white/10">
+              {userProfile ? getInitials(userProfile.fullName, userProfile.username) : <User className="size-4" />}
               <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-success ring-2 ring-white" />
             </div>
 
@@ -347,7 +348,7 @@ export default function Sidebar() {
                 </p>
               )}
               {userRole && (
-                <div className="mt-1.5 flex items-center gap-1">
+                <div className="mt-1 flex items-center gap-1">
                   <span className={`inline-flex items-center text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-full ring-1 ring-inset ${roleInfo.style}`}>
                     {roleInfo.label}
                   </span>
@@ -358,11 +359,11 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 min-h-0 px-0 py-1 overflow-y-auto scrollbar-thin">
+        <nav className="flex-1 min-h-0 px-0 py-0.5 overflow-hidden">
           <NavSection title="Outgoing Package" links={outgoingLinks} onItemClick={() => setIsOpen(false)} />
           <NavSection title="Incoming Package" links={incomingLinks} onItemClick={() => setIsOpen(false)} />
           
-          <div className="mt-3 border-t border-gray-300/60 pt-2 space-y-0.5 px-4">
+          <div className="mt-1.5 border-t border-gray-300/60 pt-1.5 space-y-0.5 px-4">
             {otherLinks.map((link) => (
               <SidebarItem key={link.label} link={link} onClick={() => setIsOpen(false)} />
             ))}
@@ -370,26 +371,26 @@ export default function Sidebar() {
 
           {/* Admin Section - Only for admin and superAdmin */}
           {isAdminUser && (
-            <div className="mt-2 border-t border-gray-300/60 pt-2">
-              <h3 className="px-8 text-[11px] font-bold text-gray-500/80 uppercase tracking-wider mb-1.5">Administration</h3>
+            <div className="mt-1.5 border-t border-gray-300/60 pt-1.5">
+              <h3 className="px-8 text-[11px] font-bold text-gray-500/80 uppercase tracking-wider mb-1">Administration</h3>
               <div className="px-4 space-y-0.5">
                 <button
                   onClick={() => { nav.goToAllUsers(); setIsOpen(false); }}
-                  className="w-full flex items-center gap-4 rounded-xl px-4 py-2.5 transition-all duration-200 hover:bg-gray-200/80 text-gray-700 hover:text-gray-900 group"
+                  className="w-full flex items-center gap-4 rounded-xl px-4 py-1.5 transition-all duration-200 hover:bg-gray-200/80 text-gray-700 hover:text-gray-900 group"
                 >
                   <Shield className="h-5 w-5 text-gray-800/90 group-hover:scale-110 transition-transform" />
                   <span className="font-bold text-[13px] opacity-90 group-hover:opacity-100">Access Management</span>
                 </button>
                 <button
                   onClick={() => { nav.goToLoginMonitor(); setIsOpen(false); }}
-                  className="w-full flex items-center gap-4 rounded-xl px-4 py-2.5 transition-all duration-200 hover:bg-gray-200/80 text-gray-700 hover:text-gray-900 group"
+                  className="w-full flex items-center gap-4 rounded-xl px-4 py-1.5 transition-all duration-200 hover:bg-gray-200/80 text-gray-700 hover:text-gray-900 group"
                 >
                   <Monitor className="h-5 w-5 text-gray-800/90 group-hover:scale-110 transition-transform" />
                   <span className="font-bold text-[13px] opacity-90 group-hover:opacity-100">Login Monitor</span>
                 </button>
                 <button
                   onClick={() => { nav.goToExitApproval(); setIsOpen(false); }}
-                  className="w-full flex items-center gap-4 rounded-xl px-4 py-2.5 transition-all duration-200 hover:bg-gray-200/80 text-gray-700 hover:text-gray-900 group"
+                  className="w-full flex items-center gap-4 rounded-xl px-4 py-1.5 transition-all duration-200 hover:bg-gray-200/80 text-gray-700 hover:text-gray-900 group"
                 >
                   <UserCheck className="h-5 w-5 text-gray-800/90 group-hover:scale-110 transition-transform" />
                   <span className="font-bold text-[13px] opacity-90 group-hover:opacity-100">Exit Approval</span>
@@ -400,8 +401,8 @@ export default function Sidebar() {
         </nav>
 
         {/* Logout */}
-        <div className="shrink-0 border-t border-gray-300/60 px-5 py-2.5 bg-[#e5e5e5]">
-          <button onClick={() => void handleLogout()} className="flex items-center justify-center gap-3 w-full group transition-all rounded-xl px-4 py-2.5 hover:bg-red-100/60 border border-transparent hover:border-red-200">
+        <div className="shrink-0 border-t border-gray-300/60 px-5 py-2 bg-[#e5e5e5]">
+          <button onClick={() => void handleLogout()} className="flex items-center justify-center gap-3 w-full group transition-all rounded-xl px-4 py-2 hover:bg-red-100/60 border border-transparent hover:border-red-200">
             <LogOut className="h-5 w-5 text-gray-600 group-hover:text-red-600 transition-colors" />
             <span className="font-bold text-[13px] text-gray-600 group-hover:text-red-600 transition-colors">{isLoggingOut ? 'Logging out...' : 'Log Out'}</span>
           </button>
@@ -413,8 +414,8 @@ export default function Sidebar() {
 
 function NavSection({ title, links, onItemClick }: { title: string, links: NavLink[], onItemClick: () => void }) {
   return (
-    <div className="mt-2 border-t border-gray-300/60 pt-3">
-      <h3 className="px-8 text-[11px] font-bold text-gray-500/80 uppercase tracking-wider mb-1.5">{title}</h3>
+    <div className="mt-1.5 border-t border-gray-300/60 pt-1.5">
+      <h3 className="px-8 text-[11px] font-bold text-gray-500/80 uppercase tracking-wider mb-1">{title}</h3>
       <div className="px-4">
         {links.map(link => (
           <SidebarItem key={link.label} link={link} onClick={onItemClick} />
@@ -425,9 +426,9 @@ function NavSection({ title, links, onItemClick }: { title: string, links: NavLi
 }
 
 function SidebarItem({ link, onClick }: { link: NavLink, onClick: () => void }) {
-  const iconSize = link.iconSize || 'h-6 w-6';
+  const iconSize = link.iconSize || 'h-5 w-5';
   return (
-    <button onClick={() => { link.onClick(); onClick(); }} className="w-full flex items-center gap-4 rounded-xl px-4 py-2.5 transition-all duration-200 hover:bg-gray-200/80 text-gray-700 hover:text-gray-900 group">
+    <button onClick={() => { link.onClick(); onClick(); }} className="w-full flex items-center gap-4 rounded-xl px-4 py-1.5 transition-all duration-200 hover:bg-gray-200/80 text-gray-700 hover:text-gray-900 group">
       <link.icon className={`${iconSize} text-gray-800/90 group-hover:scale-110 transition-transform`} />
       <span className="font-bold text-[13px] opacity-90 group-hover:opacity-100 flex-1 text-left tracking-tight">{link.label}</span>
       {link.badge !== undefined && link.badge > 0 && (

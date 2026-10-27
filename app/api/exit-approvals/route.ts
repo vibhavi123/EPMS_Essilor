@@ -785,7 +785,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: `Exit request approved for ${pendingReq.EmployeeName} (${pendingReq.EmployeeId}) by ${approver.fullName} (${approver.employeeId}).`,
+        message: `Exit request approved for ${pendingReq.EmployeeName} by ${approver.fullName}.`,
         data: {
           id: requestId,
           employeeId: pendingReq.EmployeeId,

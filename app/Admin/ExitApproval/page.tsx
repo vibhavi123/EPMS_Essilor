@@ -53,6 +53,7 @@ function ExitApprovalPageContent() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<ExitApprovalRecord[]>([]);
+  const [pendingSearchQuery, setPendingSearchQuery] = useState("");
   const [pendingCurrentPage, setPendingCurrentPage] = useState(1);
   const pendingPerPage = 10;
   const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
@@ -158,14 +159,26 @@ function ExitApprovalPageContent() {
     return () => clearInterval(interval);
   }, [fetchLoggedInApprover, fetchActiveApprovals]);
 
-  // Pagination helpers for Pending Employee Exit Requests table
+  // Search & Pagination helpers for Pending Employee Exit Requests table
+  const filteredPendingRequests = pendingRequests.filter((item) => {
+    const q = pendingSearchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.employeeId.toLowerCase().includes(q) ||
+      item.employeeName.toLowerCase().includes(q) ||
+      (item.department || "").toLowerCase().includes(q) ||
+      (item.employeeCompany || "").toLowerCase().includes(q) ||
+      (item.requestReason || "").toLowerCase().includes(q)
+    );
+  });
+
   const pendingTotalPages = Math.max(
     1,
-    Math.ceil(pendingRequests.length / pendingPerPage)
+    Math.ceil(filteredPendingRequests.length / pendingPerPage)
   );
   const safePendingCurrentPage = Math.min(pendingCurrentPage, pendingTotalPages);
   const pendingStartIndex = (safePendingCurrentPage - 1) * pendingPerPage;
-  const paginatedPendingRequests = pendingRequests.slice(
+  const paginatedPendingRequests = filteredPendingRequests.slice(
     pendingStartIndex,
     pendingStartIndex + pendingPerPage
   );
@@ -469,7 +482,7 @@ function ExitApprovalPageContent() {
         title: "Request Approved",
         message:
           data?.message ||
-          `Exit request approved for ${reqItem.employeeName} (${reqItem.employeeId}).`,
+          `Exit request approved for ${reqItem.employeeName}.`,
         type: "success",
       });
     } catch (error: unknown) {
@@ -926,13 +939,57 @@ function ExitApprovalPageContent() {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            {/* Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 border-b border-gray-200 p-4 bg-white">
+              <div className="relative flex-1 sm:max-w-md">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="text"
+                  value={pendingSearchQuery}
+                  onChange={(e) => {
+                    setPendingSearchQuery(e.target.value);
+                    setPendingCurrentPage(1);
+                  }}
+                  placeholder="Search by Employee ID, Name, Department, Company, or Reason..."
+                  className="h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-9 text-sm text-[#0c244c] placeholder:text-gray-400 focus:border-[#0084c8] focus:outline-none focus:ring-2 focus:ring-[#0084c8]/20"
+                />
+                {pendingSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingSearchQuery("");
+                      setPendingCurrentPage(1);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+              {pendingSearchQuery.trim() && (
+                <p className="text-xs text-gray-500">
+                  Found{" "}
+                  <span className="font-bold text-[#0c244c]">
+                    {filteredPendingRequests.length}
+                  </span>{" "}
+                  matching request{filteredPendingRequests.length === 1 ? "" : "s"}
+                </p>
+              )}
+            </div>
+
             {isLoadingApprovals && pendingRequests.length === 0 ? (
               <div className="p-8 text-center text-sm text-gray-500">
                 Loading pending employee exit requests...
               </div>
-            ) : pendingRequests.length === 0 ? (
+            ) : filteredPendingRequests.length === 0 ? (
               <div className="p-8 text-center text-sm text-gray-500">
-                No pending exit requests from employees right now.
+                {pendingSearchQuery.trim()
+                  ? `No pending requests match "${pendingSearchQuery.trim()}".`
+                  : "No pending exit requests from employees right now."}
               </div>
             ) : (
               <>
@@ -1021,14 +1078,14 @@ function ExitApprovalPageContent() {
                     <span className="font-semibold text-[#0c244c]">
                       {Math.min(
                         pendingStartIndex + pendingPerPage,
-                        pendingRequests.length
+                        filteredPendingRequests.length
                       )}
                     </span>{" "}
                     of{" "}
                     <span className="font-semibold text-[#0c244c]">
-                      {pendingRequests.length}
+                      {filteredPendingRequests.length}
                     </span>{" "}
-                    pending request{pendingRequests.length === 1 ? "" : "s"}
+                    pending request{filteredPendingRequests.length === 1 ? "" : "s"}
                   </p>
                   <div className="flex gap-1 items-center">
                     <button

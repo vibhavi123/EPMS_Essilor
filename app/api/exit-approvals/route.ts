@@ -688,7 +688,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          message: `Exit approval request submitted for ${empProfile.fullName} (${empProfile.employeeId}). Waiting for Admin or SuperAdmin approval.`,
+          message: `Exit approval request submitted for ${empProfile.fullName} (${empProfile.employeeId}). Waiting for approval.`,
           data: {
             id: insertRes.insertId,
             employeeId: empProfile.employeeId,

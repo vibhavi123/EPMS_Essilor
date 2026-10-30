@@ -234,7 +234,7 @@ export default function ExitApprovalRequestPage() {
       case "used":
         return (
           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
-            Used (Exited)
+            Used
           </span>
         );
       default:

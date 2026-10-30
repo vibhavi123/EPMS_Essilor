@@ -520,7 +520,7 @@ export default function AddCustomerPage() {
               <div className="mt-6 flex justify-end gap-2">
                 <button onClick={() => setCustomerToDelete(null)} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent">Cancel</button>
                 <button onClick={() => void confirmDeleteCustomer()} disabled={!!deletingCustomerId} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-destructive text-white hover:brightness-110 disabled:opacity-45">
-                  {deletingCustomerId ? <><Loader2 className="size-4 animate-spin" /> Deleting...</> : 'Confirm Delete'}
+                  {deletingCustomerId ? <><Loader2 className="size-4 animate-spin" /> Deleting.....</> : 'Confirm Delete'}
                 </button>
               </div>
             </div>

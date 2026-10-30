@@ -344,7 +344,7 @@ export default function AddEmployeePage() {
           </div>
           <div className="flex gap-2">
             <button onClick={() => nav.goToAddPackage()} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] transition-all">
-              <ArrowLeft className="size-4" /> Back to Hub
+              <ArrowLeft className="size-4" /> Back 
             </button>
           </div>
         </div>
@@ -382,7 +382,7 @@ export default function AddEmployeePage() {
                 <div className="space-y-1.5">
                   <label className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Employee ID</label>
                   <div className="flex h-11 items-center rounded-lg border border-dashed border-primary/40 bg-primary/6 px-3 font-mono text-sm font-bold text-navy">{generatedEmployeeId ?? 'Generating...'}</div>
-                  <p className="text-[12px] text-muted-foreground">Auto-generated — read only.</p>
+                  <p className="text-[12px] text-muted-foreground">Auto-generated-read only.</p>
                 </div>
 
                 {/* Name with autocomplete */}

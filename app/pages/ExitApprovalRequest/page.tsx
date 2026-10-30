@@ -69,20 +69,27 @@ export default function ExitApprovalRequestPage() {
     try {
       const res = await fetch("/api/exit-approvals?meEmployee=1");
       const data = await res.json();
-      if (!res.ok || !data?.success || !data?.data?.employee) {
+      if (!res.ok || !data?.success) {
         throw new Error(
           data?.message || "Could not load your Employee ID and profile."
         );
       }
-      setEmployee(data.data.employee as EmployeeProfileData);
+      if (data?.data?.employee) {
+        setEmployee(data.data.employee as EmployeeProfileData);
+        setProfileError(null);
+      } else {
+        setEmployee(null);
+        setProfileError(data?.message || "No Employee ID linked to this account.");
+      }
       setMyRequests(
-        Array.isArray(data.data.requests)
+        Array.isArray(data?.data?.requests)
           ? (data.data.requests as EmployeeExitRequestRecord[])
           : []
       );
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Failed to load Employee ID";
+      setEmployee(null);
       setProfileError(msg);
     } finally {
       setIsLoadingProfile(false);
@@ -98,7 +105,15 @@ export default function ExitApprovalRequestPage() {
   }, [fetchEmployeeAndRequests]);
 
   const handleSubmitRequest = async () => {
-    if (!employee) return;
+    if (!employee) {
+      setAlertModal({
+        isOpen: true,
+        title: "No Employee ID",
+        message: "You cannot request exit approval because your account does not have a linked Employee ID.",
+        type: "error",
+      });
+      return;
+    }
     if (!requestReason.trim()) {
       setAlertModal({
         isOpen: true,
@@ -274,10 +289,14 @@ export default function ExitApprovalRequestPage() {
                   value={
                     isLoadingProfile
                       ? "Loading your Employee ID..."
-                      : employee?.employeeId || ""
+                      : employee?.employeeId || "No Employee ID"
                   }
                   placeholder="Employee ID (EMP...)"
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg font-mono text-lg font-bold text-[#0c244c] cursor-default focus:outline-none"
+                  className={`w-full px-4 py-3 border rounded-lg font-mono text-lg font-bold cursor-default focus:outline-none ${
+                    !employee && !isLoadingProfile
+                      ? "bg-red-50 border-red-300 text-red-600"
+                      : "bg-gray-100 border-gray-300 text-[#0c244c]"
+                  }`}
                 />
                 {profileError && (
                   <p className="mt-2 text-xs font-semibold text-red-600">
@@ -291,9 +310,13 @@ export default function ExitApprovalRequestPage() {
                     type="text"
                     value={requestReason}
                     onChange={(e) => setRequestReason(e.target.value)}
-                    placeholder="e.g. Personal errand, Medical appointment, Field visit (required)"
+                    placeholder={
+                      employee
+                        ? "e.g. Personal errand, Medical appointment, Field visit (required)"
+                        : "Cannot request exit without an Employee ID"
+                    }
                     disabled={!employee || isSubmitting}
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0084c8] text-sm disabled:bg-gray-100"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0084c8] text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -337,10 +360,17 @@ export default function ExitApprovalRequestPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex h-full min-h-24 items-center justify-center text-sm text-gray-500 text-center">
-                      {isLoadingProfile
-                        ? "Loading your Employee details..."
-                        : "Unable to load Employee details."}
+                    <div className="flex flex-col h-full min-h-24 items-center justify-center text-sm text-gray-500 text-center p-2">
+                      {isLoadingProfile ? (
+                        "Loading your Employee details..."
+                      ) : (
+                        <>
+                          <span className="font-semibold text-red-600">No Employee ID Found</span>
+                          <span className="text-xs text-gray-500 mt-1">
+                            Your account is not linked to any Employee ID in the system.
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -357,7 +387,11 @@ export default function ExitApprovalRequestPage() {
               disabled={isSubmitting || !employee || !requestReason.trim()}
               className="w-full md:w-72 inline-flex items-center justify-center gap-2 bg-[#0084c8] hover:bg-[#0071ad] disabled:bg-gray-300 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Sending Request..." : "Send Exit Request"}
+              {isSubmitting
+                ? "Sending Request..."
+                : !employee
+                ? "No Employee ID"
+                : "Send Exit Request"}
             </button>
           </div>
         </form>

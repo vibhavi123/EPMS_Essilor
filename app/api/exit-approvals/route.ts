@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Pool, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import { getConnection } from "@/lib/db";
 import { getRequestAccessContext } from "@/lib/server/accessControl";
-import { generateNextEmployeeId } from "@/lib/server/idSequenceGenerator";
 
 export const dynamic = "force-dynamic";
 
@@ -191,32 +190,8 @@ async function resolveUserEmployeeProfile(
     };
   }
 
-  // 3. If no Employee record exists yet for this user, create one with an EMP... ID and link it
-  const newEmployeeId = await generateNextEmployeeId(pool);
-  const empName = String(user.FullName || user.Username || "Employee").trim();
-  const empCompany = String(user.Company || "Company").trim();
-  const empDepartment = String(user.Department || "General").trim();
-
-  await pool.query(
-    `INSERT INTO Employees (EmployeeId, EmployeeName, EmployeeCompany, Department, IsActive)
-     VALUES (?, ?, ?, ?, 1)`,
-    [newEmployeeId, empName, empCompany, empDepartment]
-  );
-
-  await pool.query(`UPDATE Users SET EmployeeId = ? WHERE Id = ?`, [
-    newEmployeeId,
-    user.Id,
-  ]);
-
-  return {
-    id: user.Id,
-    employeeId: newEmployeeId,
-    username: user.Username,
-    fullName: empName,
-    role: user.Role,
-    department: empDepartment,
-    company: empCompany,
-  };
+  // 3. If no Employee record exists in Employees for this user, do NOT create one
+  return null;
 }
 
 /**
@@ -271,13 +246,14 @@ export async function GET(request: NextRequest) {
       );
 
       if (!employeeProfile) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Could not resolve your Employee ID from your account.",
+        return NextResponse.json({
+          success: true,
+          data: {
+            employee: null,
+            requests: [],
           },
-          { status: 404 }
-        );
+          message: "No Employee ID linked to this account.",
+        });
       }
 
       const [myRows] = await pool.query<RowDataPacket[]>(
@@ -599,9 +575,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            message: "Could not resolve your Employee ID from your account.",
+            message: "No Employee ID is linked to your account. You cannot submit an exit request.",
           },
-          { status: 404 }
+          { status: 403 }
         );
       }
 

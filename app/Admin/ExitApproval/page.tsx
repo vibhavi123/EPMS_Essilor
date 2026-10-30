@@ -684,10 +684,14 @@ function ExitApprovalPageContent() {
                     value={
                       isLoadingAdmin
                         ? "Loading Approver Employee ID..."
-                        : selectedAdmin?.employeeId || ""
+                        : selectedAdmin?.employeeId || "No Employee ID"
                     }
                     placeholder="Approver Employee ID (EMP...)"
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg font-mono text-lg font-bold text-[#0c244c] cursor-default focus:outline-none"
+                    className={`w-full px-4 py-3 border rounded-lg font-mono text-lg font-bold cursor-default focus:outline-none ${
+                      !selectedAdmin && !isLoadingAdmin
+                        ? "bg-red-50 border-red-300 text-red-600"
+                        : "bg-gray-100 border-gray-300 text-[#0c244c]"
+                    }`}
                   />
                 </div>
                 {selectedAdmin && (
@@ -751,10 +755,17 @@ function ExitApprovalPageContent() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex h-full min-h-24 items-center justify-center text-sm text-gray-500 text-center">
-                      {isLoadingAdmin
-                        ? "Loading your Admin / SuperAdmin Employee details..."
-                        : "Unable to load Admin / SuperAdmin Employee details."}
+                    <div className="flex flex-col h-full min-h-24 items-center justify-center text-sm text-gray-500 text-center p-2">
+                      {isLoadingAdmin ? (
+                        "Loading your Admin / SuperAdmin Employee details..."
+                      ) : (
+                        <>
+                          <span className="font-semibold text-red-600">No Approver Employee ID</span>
+                          <span className="text-xs text-gray-500 mt-1">
+                            Your Admin / SuperAdmin account is not linked to an Employee ID.
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

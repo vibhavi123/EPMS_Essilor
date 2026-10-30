@@ -38,21 +38,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const trimmedCompany = (employeeCompany ?? "").trim();
     const [existingNameRows] = await pool.query<RowDataPacket[]>(
-      `SELECT Id, EmployeeId FROM Employees 
-       WHERE REPLACE(LOWER(EmployeeName), ' ', '') = REPLACE(LOWER(?), ' ', '') 
-         AND (REPLACE(LOWER(COALESCE(EmployeeCompany, '')), ' ', '') = REPLACE(LOWER(?), ' ', '') OR (EmployeeCompany IS NULL AND ? = ''))
-         AND IsActive = 1 
+      `SELECT Id, EmployeeId, EmployeeName, IsActive FROM Employees 
+       WHERE LOWER(TRIM(EmployeeName)) = LOWER(TRIM(?)) 
+          OR REPLACE(LOWER(TRIM(EmployeeName)), ' ', '') = REPLACE(LOWER(TRIM(?)), ' ', '')
+       ORDER BY IsActive DESC, Id DESC
        LIMIT 1`,
-      [employeeName.trim(), trimmedCompany, trimmedCompany]
+      [employeeName.trim(), employeeName.trim()]
     );
 
     if (existingNameRows.length > 0) {
+      const existing = existingNameRows[0];
+      const statusNote = existing.IsActive ? "" : " (Inactive)";
       return NextResponse.json(
         {
           success: false,
-          message: `An employee with the name "${employeeName.trim()}" already exists in this company (${existingNameRows[0].EmployeeId})`,
+          message: `An employee with the name "${employeeName.trim()}" already exists in the system (${existing.EmployeeId}${statusNote})`,
         },
         { status: 409 }
       );

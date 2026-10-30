@@ -408,7 +408,7 @@ export default function AddPackagePage() {
           </div>
           <div>
             <button onClick={() => nav.goToAddPackage()} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97] transition-all">
-              <ArrowLeft className="size-4" /> Back to Hub
+              <ArrowLeft className="size-4" /> Back
             </button>
           </div>
         </div>
@@ -426,7 +426,7 @@ export default function AddPackagePage() {
                     <Plus className="size-4" /> Add Another
                   </button>
                   <button onClick={() => nav.goToAddPackage()} className="inline-flex items-center gap-2 rounded-lg font-semibold h-11 px-4 text-sm bg-secondary text-navy border border-border hover:bg-accent active:scale-[0.97]">
-                    <ArrowLeft className="size-4" /> Back to Hub
+                    <ArrowLeft className="size-4" /> Back
                   </button>
                 </div>
               </div>

@@ -43,6 +43,9 @@ export async function POST(request: NextRequest) {
     let skippedCount = 0;
     let failedCount = 0;
 
+    // Track names within this upload batch to prevent intra-file duplicates
+    const seenNamesInBatch = new Map<string, number>();
+
     for (let i = 0; i < rows.length; i++) {
       const rowNum = i + 1;
       const raw = rows[i] || {};
@@ -64,25 +67,47 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Check if employee with matching name & company (ignoring spaces & case) already exists
-      const [existingRows] = await pool.query<RowDataPacket[]>(
-        `SELECT Id, EmployeeId FROM Employees 
-         WHERE REPLACE(LOWER(EmployeeName), ' ', '') = REPLACE(LOWER(?), ' ', '') 
-           AND (REPLACE(LOWER(COALESCE(EmployeeCompany, '')), ' ', '') = REPLACE(LOWER(?), ' ', '') OR (EmployeeCompany IS NULL AND ? = ''))
-           AND IsActive = 1 
-         LIMIT 1`,
-        [name, company, company]
-      );
+      const normalizedName = name.toLowerCase().replace(/\s+/g, "");
 
-      if (existingRows.length > 0) {
+      // 1. Check for duplicate name in the same uploaded CSV file
+      if (seenNamesInBatch.has(normalizedName)) {
+        const earlierRow = seenNamesInBatch.get(normalizedName);
         results.push({
           row: rowNum,
           employeeName: name,
           company: company || "-",
           department: department || "-",
           status: "Skipped",
-          employeeId: existingRows[0].EmployeeId,
-          reason: "Employee already exists",
+          reason: `Duplicate name in uploaded CSV file (already listed in row #${earlierRow})`,
+        });
+        skippedCount++;
+        continue;
+      }
+
+      seenNamesInBatch.set(normalizedName, rowNum);
+
+      // 2. Check if an employee with the entire name already exists anywhere in the system
+      const [existingRows] = await pool.query<RowDataPacket[]>(
+        `SELECT Id, EmployeeId, EmployeeName, EmployeeCompany, Department, IsActive 
+         FROM Employees 
+         WHERE LOWER(TRIM(EmployeeName)) = LOWER(TRIM(?)) 
+            OR REPLACE(LOWER(TRIM(EmployeeName)), ' ', '') = REPLACE(LOWER(TRIM(?)), ' ', '')
+         ORDER BY IsActive DESC, Id DESC
+         LIMIT 1`,
+        [name, name]
+      );
+
+      if (existingRows.length > 0) {
+        const existing = existingRows[0];
+        const statusNote = existing.IsActive ? "" : " [Inactive]";
+        results.push({
+          row: rowNum,
+          employeeName: name,
+          company: company || "-",
+          department: department || "-",
+          status: "Skipped",
+          employeeId: existing.EmployeeId,
+          reason: `Employee name already exists in system (${existing.EmployeeId}${statusNote})`,
         });
         skippedCount++;
         continue;

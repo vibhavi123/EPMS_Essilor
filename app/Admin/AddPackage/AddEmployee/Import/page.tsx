@@ -53,6 +53,25 @@ export default function ImportEmployeesPage() {
   const [importResults, setImportResults] = useState<ImportRowResult[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
 
+  // Check for intra-file duplicate names
+  const intraFileDuplicates = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of parsedRows) {
+      const key = (r.employeeName || "").toLowerCase().replace(/\s+/g, "");
+      if (key) {
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [parsedRows]);
+
+  const hasIntraFileDuplicates = React.useMemo(() => {
+    for (const count of intraFileDuplicates.values()) {
+      if (count > 1) return true;
+    }
+    return false;
+  }, [intraFileDuplicates]);
+
   useEffect(() => {
     async function checkPermissions() {
       try {
@@ -364,7 +383,7 @@ export default function ImportEmployeesPage() {
                     CSV Preview
                   </h3>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Review extracted employee details before starting import. Employee IDs will be generated automatically.
+                    Review extracted employee details before starting import. The entire name is checked against the system to prevent any duplicates.
                   </p>
                 </div>
 
@@ -396,11 +415,21 @@ export default function ImportEmployeesPage() {
                 </div>
               )}
 
+              {hasIntraFileDuplicates && (
+                <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-xl flex items-center gap-3 text-amber-800 text-sm">
+                  <AlertTriangle size={18} className="shrink-0 text-amber-600" />
+                  <div>
+                    <span className="font-bold">Duplicate names detected in file: </span>
+                    <span>Some employee names appear multiple times in this CSV. Duplicates will be safely skipped during import so only unique records are added.</span>
+                  </div>
+                </div>
+              )}
+
               {isImporting && (
                 <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-5 text-center">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-[#3ea5d9] border-t-transparent mb-3" />
                   <p className="font-bold text-[#0c244c] text-base">
-                    Importing Employees &amp; Generating Employee IDs...
+                    Importing Employees &amp; Checking Existing Names...
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Processing rows sequentially to guarantee sequence safety. Please do not close this page.
@@ -419,22 +448,31 @@ export default function ImportEmployeesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
-                    {parsedRows.map((row, index) => (
-                      <tr key={index} className="hover:bg-gray-50/80">
-                        <td className="px-4 py-3 text-gray-400 font-mono text-xs">
-                          {index + 1}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-gray-900">
-                          {row.employeeName || <span className="text-red-400 italic">Missing</span>}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {row.employeeCompany || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {row.department || "-"}
-                        </td>
-                      </tr>
-                    ))}
+                    {parsedRows.map((row, index) => {
+                      const nameKey = (row.employeeName || "").toLowerCase().replace(/\s+/g, "");
+                      const isFileDuplicate = nameKey ? (intraFileDuplicates.get(nameKey) || 0) > 1 : false;
+                      return (
+                        <tr key={index} className="hover:bg-gray-50/80">
+                          <td className="px-4 py-3 text-gray-400 font-mono text-xs">
+                            {index + 1}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-gray-900">
+                            {row.employeeName || <span className="text-red-400 italic">Missing</span>}
+                            {isFileDuplicate && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                Duplicate in CSV
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {row.employeeCompany || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {row.department || "-"}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
